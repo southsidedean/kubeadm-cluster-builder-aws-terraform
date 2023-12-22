@@ -3,7 +3,7 @@
 
 ## Introduction
 
-### The Need: A Quick and Repeatable Local Kubernetes Cluster Using KVM
+### The Need: A Quick and Repeatable Local Kubernetes Cluster Using AWS
 
 I've been studying for the Cloud Native Computing Foundation's CKA and CKAD certification exams for a while now.  Anyone who is familiar with these exams knows that, in order to practice, you're going to need a cluster.  Hands-on experience with Kubernetes clusters, of the `kubeadm` variety, is key to passing these exams.
 

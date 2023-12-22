@@ -1,9 +1,8 @@
 # -------------------------
 # Open source K8s lab deployment for CNCF labs
-# Ubuntu 20.04
+# Ubuntu 22.04
 # Tom Dean
-# D2iQ
-# Last updated 8/9/2022
+# Last updated 12/22/2023
 # -------------------------
 
 # -------------------------
@@ -13,12 +12,12 @@
 
 variable "aws_region" {
   type    = string
-  default = "us-west-2"
+  default = "us-east-2"
 }
 
 variable "owner" {
   type    = string
-  default = "D2iQ Education"
+  default = "USER"
 }
 
 variable "control_plane_count" {
@@ -33,12 +32,12 @@ variable "control_plane_instance_type" {
 
 variable "control_plane_ami" {
   type    = string
-  default = "ami-04f9b64e786441b40"
+  default = "ami-id"
 }
 
 variable "control_plane_key" {
   type    = string
-  default = "cs-key"
+  default = "cp-key"
 }
 
 variable "worker_count" {
@@ -53,12 +52,12 @@ variable "worker_instance_type" {
 
 variable "worker_ami" {
   type    = string
-  default = "ami-04f9b64e786441b40"
+  default = "ami-id"
 }
 
 variable "worker_key" {
   type    = string
-  default = "cs-key"
+  default = "wrk-key"
 }
 
 # -------------------------
@@ -77,7 +76,7 @@ variable "route_destination_cidr_block" {
 
 variable "class_name" {
   type    = string
-  default = "mk100"
+  default = "CKA"
 }
 
 # -------------------------
@@ -138,7 +137,7 @@ data "aws_caller_identity" "current" {}
 # -------------------------
 # IAM Polices/Roles/Instance Profiles
 # All Host(s)
-# d2iq-labs-role
+# kubeadm-labs-role
 # -------------------------
 # Create instance-assume-role-policy
 # We will need this to create the IAM Roles
@@ -156,12 +155,12 @@ data "aws_iam_policy_document" "instance-assume-role-policy" {
 }
 
 # -------------------------
-# Create d2iq-labs-role
+# Create kubeadm-labs-role
 # Very liberal, with guardrails set by the permissions_boundary
 # -------------------------
 
-resource "aws_iam_role" "d2iq-labs-role" {
-  name                 = "d2iq-labs-role"
+resource "aws_iam_role" "kubeadm-labs-role" {
+  name                 = "kubeadm-labs-role"
   assume_role_policy   = data.aws_iam_policy_document.instance-assume-role-policy.json
   permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/BoundaryForAdministratorAccess"
   inline_policy {
@@ -182,13 +181,13 @@ resource "aws_iam_role" "d2iq-labs-role" {
 
 # -------------------------
 # IAM Instance Profile
-# This is where we attach our d2iq-labs-role Role to our d2iq-labs-role-instance-profile Instance Profile
-# The d2iq-labs-role-instance-profile Instance Profile is consumed by the EC2 Instances (Control Plane/Worker)
+# This is where we attach our kubeadm-labs-role Role to our kubeadm-labs-role-instance-profile Instance Profile
+# The kubeadm-labs-role-instance-profile Instance Profile is consumed by the EC2 Instances (Control Plane/Worker)
 # -------------------------
 
-resource "aws_iam_instance_profile" "d2iq-labs-role-instance-profile" {
-  name = "d2iq-labs-role-instance-profile"
-  role = aws_iam_role.d2iq-labs-role.name
+resource "aws_iam_instance_profile" "kubeadm-labs-role-instance-profile" {
+  name = "kubeadm-labs-role-instance-profile"
+  role = aws_iam_role.kubeadm-labs-role.name
 }
 
 # -------------------------
@@ -329,7 +328,7 @@ resource "aws_instance" "control_plane" {
     aws_security_group.course_ssh.id,
     aws_security_group.elb_control_plane.id
   ]
-  iam_instance_profile = aws_iam_instance_profile.d2iq-labs-role-instance-profile.name
+  iam_instance_profile = aws_iam_instance_profile.kubeadm-labs-role-instance-profile.name
 
   associate_public_ip_address = true
   root_block_device {
@@ -358,7 +357,6 @@ echo "${tls_private_key.student_key.private_key_pem}" > /home/ubuntu/student_key
 echo "${tls_private_key.student_key.public_key_pem}" > /home/ubuntu/student_key.pub
 chmod 600 /home/ubuntu/student_key.pem
 chown ubuntu:ubuntu /home/ubuntu/student_key.*
-rm -rf ~/konvoy*
 EOF
 }
 
@@ -376,7 +374,7 @@ resource "aws_instance" "worker" {
     aws_security_group.common.id,
     aws_security_group.course_ssh.id
   ]
-  iam_instance_profile        = aws_iam_instance_profile.d2iq-labs-role-instance-profile.name
+  iam_instance_profile        = aws_iam_instance_profile.kubeadm-labs-role-instance-profile.name
   associate_public_ip_address = true
 
   root_block_device {
@@ -408,7 +406,6 @@ resource "aws_instance" "worker" {
 
   user_data = <<EOF
 #!/usr/bin/bash
-rm -rf ~/konvoy*
 echo "${tls_private_key.student_key.private_key_pem}" > /home/ubuntu/student_key.pem
 echo "${tls_private_key.student_key.public_key_pem}" > /home/ubuntu/student_key.pub
 chmod 600 /home/ubuntu/student_key.pem
