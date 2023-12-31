@@ -3,7 +3,7 @@
 # for CNCF CKA/D labs
 # Ubuntu 22.04
 # Tom Dean
-# Last updated 12/30/2023
+# Last updated 12/31/2023
 # -------------------------
 
 # ========================
@@ -21,6 +21,8 @@ terraform {
 
 # ========================
 # Configure the AWS Provider
+# Set Region in the aws_region
+# variable in Cluster Variables
 # ========================
 
 provider "aws" {
@@ -111,15 +113,6 @@ resource "aws_key_pair" "cluster_key" {
   public_key      = tls_private_key.cluster_key.public_key_openssh
 }
 
-output "cluster_key_name" {
-  value = "${trimspace(aws_key_pair.cluster_key.key_name)}"
-}
-
-output "cluster_private_key_openssh" {
-  value = tls_private_key.cluster_key.private_key_openssh
-  sensitive = true
-}
-
 # -------------------------
 # Generate a random string for cluster name
 # No two clusters shall be named the same!
@@ -132,10 +125,6 @@ resource "random_pet" "pet" {
 
 locals {
   cluster_name = random_pet.pet.id
-}
-
-output "cluster_name" {
-  value = local.cluster_name
 }
 
 # -------------------------
@@ -233,7 +222,10 @@ resource "aws_iam_role" "kubeadm-worker-role" {
 
 # -------------------------
 # IAM Instance Profile
-# This is where we attach our kubeadm-control-plane-role and kubeadm-worker-role Roles to our kubeadm-control-plane-role-instance-profile and kubeadm-worker-role-instance-profile Instance Profiles
+# This is where we attach our kubeadm-control-plane-role
+# and kubeadm-worker-role Roles to our
+# kubeadm-control-plane-role-instance-profile and
+# kubeadm-worker-role-instance-profile Instance Profiles
 # These Instance Profiles are consumed by the EC2 Instances (Control Plane/Worker)
 # -------------------------
 
@@ -427,6 +419,7 @@ EOF
 
 # -------------------------
 # Worker Instances
+# Two, by default
 # -------------------------
 
 resource "aws_instance" "worker" {
@@ -447,13 +440,6 @@ resource "aws_instance" "worker" {
     volume_type           = "gp2"
     delete_on_termination = true
   }
-
-  #ebs_block_device {
-  #  device_name           = "/dev/xvda"
-  #  volume_size           = 500
-  #  volume_type           = "gp2"
-  #  delete_on_termination = true
-  #}
 
   tags = {
     Class                                         = var.class_name,
@@ -478,9 +464,84 @@ echo "${tls_private_key.cluster_key.private_key_pem}" > /home/ubuntu/cluster_key
 echo "${tls_private_key.cluster_key.public_key_pem}" > /home/ubuntu/cluster_key.pub
 chmod 600 /home/ubuntu/cluster_key.*
 chown ubuntu:ubuntu /home/ubuntu/cluster_key.*
-#sudo mkdir -p /mnt/disks/data-vol-01
-#sudo mkfs.ext4 /dev/nvme1n1
-#echo '/dev/nvme1n1 /mnt/disks/data-vol-01 ext4 defaults 0 2' | sudo tee -a /etc/fstab > /dev/null
-#sudo mount -a
 EOF
+}
+
+# -------------------------
+# Outputs
+# -------------------------
+
+output "cluster_name" {
+  value = local.cluster_name
+}
+
+output "cluster_key_name" {
+  value = "${trimspace(aws_key_pair.cluster_key.key_name)}"
+}
+
+output "cluster_private_key_openssh" {
+  value = tls_private_key.cluster_key.private_key_openssh
+  sensitive = false
+}
+
+output "control_plane_public_ip" {
+  value = aws_instance.control_plane[0].public_ip
+}
+
+output "control_plane_private_ip" {
+  value = aws_instance.control_plane[0].private_ip
+}
+
+output "worker_0_public_ip" {
+  value = aws_instance.worker[0].public_ip
+}
+
+output "worker_0_private_ip" {
+  value = aws_instance.worker[0].private_ip
+}
+
+output "worker_1_public_ip" {
+  value = aws_instance.worker[1].public_ip
+}
+
+output "worker_1_private_ip" {
+  value = aws_instance.worker[1].private_ip
+}
+
+# -------------------------
+# Create Configuration Text File
+# -------------------------
+
+resource "local_file" "cluster_configuration" {
+  filename = "${local.cluster_name}-configuration.txt"
+  content = templatefile(
+    abspath("${path.root}/configuration.tpl"),
+    {
+      cluster_name              = local.cluster_name,
+      cluster_key_name          = "${trimspace(aws_key_pair.cluster_key.key_name)}",
+      cluster_private_key_openssh = tls_private_key.cluster_key.private_key_openssh
+      control_plane_public_ips  = aws_instance.control_plane[0].public_ip,
+      control_plane_private_ips = aws_instance.control_plane[0].private_ip,
+      worker_0_public_ip        = aws_instance.worker[0].public_ip,
+      worker_0_private_ip       = aws_instance.worker[0].private_ip,
+      worker_1_public_ip        = aws_instance.worker[1].public_ip,
+      worker_1_private_ip       = aws_instance.worker[1].private_ip
+    }
+  )
+}
+
+# -------------------------
+# Create SSH Key Files
+# -------------------------
+
+resource "local_file" "ssh_key_private" {
+  filename        = "./cluster_key.priv"
+  content         = tls_private_key.cluster_key.private_key_openssh
+  file_permission = "0600"
+}
+
+resource "local_file" "ssh_key_public" {
+  filename        = "./cluster_key.pub"
+  content         = tls_private_key.cluster_key.public_key_openssh
+  file_permission = "0600"
 }

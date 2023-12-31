@@ -1,5 +1,5 @@
 # kubeadm-cluster-builder-aws-terraform
-**Tom Dean - 12/30/2023**
+**Tom Dean - 12/31/2023**
 
 ## Introduction
 
@@ -135,13 +135,13 @@ cd kubeadm-cluster-builder-aws-terraform
 
 **Let's take a look at the Terraform code:**
 ```bash
-more main.tf
+more terraform/main.tf
 
 ```
 
 [Terraform code](terraform/main.tf)
 
-You can see that the code is configurable via the numerous variables at the beginning of the file.  By default, a cluster will be created with a single control plane node and two worker nodes.  Feel free to adjust the values as you see fit.
+You can configure the infrastructure via the numerous variables at the beginning of the file.  By default, a cluster will be created with a single control plane node and two worker nodes.  Feel free to adjust the values as you see fit.
 
 ***Ok, we're all ready to start deploying a cluster.  Let's go!***
 
@@ -336,7 +336,7 @@ When deploying a Kubernetes cluster, you have choices with regard to your contai
 
 ***CHOOSE ONE OPTION ONLY!  Option 1 is Docker/`containerd` and Option 2 is CRI-O.  ONE OPTION ONLY!***
 
-### Option 1: Prepare the KVM Nodes Using the `containerd` Runtime
+### Option 1: Prepare the Nodes Using the `containerd` Runtime
 
 [kubernetes.io: Container Runtimes](https://kubernetes.io/docs/setup/production-environment/container-runtimes/)
 
@@ -728,6 +728,26 @@ Now, we're going to use `kubeadm` to configure and deploy Kubernetes on the node
 #### Inititalize the Control Plane Node
 
 ***Perform the following steps on the Control Plane node.***
+
+```bash
+cat <<EOF | tee ./control-plane-kubeadm.conf
+---
+apiServer:
+  extraArgs:
+    cloud-provider: aws
+apiVersion: kubeadm.k8s.io/v1beta3
+clusterName: $CLUSTER_NAME # your cluster name - from your cluster configuration file
+controllerManager:
+  extraArgs:
+    configure-cloud-routes: 'false'
+kind: ClusterConfiguration
+kubernetesVersion: $K8S_VERSION # <-- Make sure this matches our install version!
+networking:
+  dnsDomain: cluster.local
+  podSubnet: 192.168.0.0/16
+EOF
+
+```
 
 **Initialize Control Plane Node:**
 ```bash
