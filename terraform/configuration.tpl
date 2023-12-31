@@ -8,7 +8,7 @@ ${ cluster_key_name }
 ${ cluster_private_key_openssh }
 
 [node-ssh-user]
-user = ubuntu
+ubuntu
 
 [control-plane-ip-addresses]
 Public: ${ control_plane_public_ip }

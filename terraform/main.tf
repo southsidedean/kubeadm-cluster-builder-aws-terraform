@@ -537,11 +537,11 @@ resource "local_file" "cluster_configuration" {
 resource "local_file" "ssh_key_private" {
   filename        = "./cluster_key.priv"
   content         = tls_private_key.cluster_key.private_key_openssh
-  file_permission = "0600"
+  file_permission = "0400"
 }
 
 resource "local_file" "ssh_key_public" {
   filename        = "./cluster_key.pub"
   content         = tls_private_key.cluster_key.public_key_openssh
-  file_permission = "0600"
+  file_permission = "0400"
 }
