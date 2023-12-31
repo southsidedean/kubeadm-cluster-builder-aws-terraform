@@ -312,7 +312,7 @@ resource "aws_instance" "control_plane" {
   ami           = data.aws_ami.ubuntu_ami.id
   instance_type = var.control_plane_instance_type
   subnet_id     = aws_subnet.course_subnet.id
-  key_name      = aws_key_pair.cluster_key
+  key_name      = aws_key_pair.cluster_key.key_name
   vpc_security_group_ids = [
     aws_security_group.common.id,
     aws_security_group.cluster_ssh.id,
@@ -359,7 +359,7 @@ resource "aws_instance" "worker" {
   ami           = data.aws_ami.ubuntu_ami.id
   instance_type = var.worker_instance_type
   subnet_id     = aws_subnet.course_subnet.id
-  key_name      = aws_key_pair.cluster_key
+  key_name      = aws_key_pair.cluster_key.key_name
   vpc_security_group_ids = [
     aws_security_group.common.id,
     aws_security_group.cluster_ssh.id
