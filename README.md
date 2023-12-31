@@ -13,7 +13,7 @@ What's needed is a pre-deployed set of Ubuntu Linux nodes that can be used to me
 
 ### The Details: A Single-File Terraform Solution
 
-[Terraform code](main.tf)
+[Terraform code](terraform/main.tf)
 
 I like to K.I.S.S. (Keep It Simple, Stupid!) whenever possible, and this was a case where I could put everything into a single file.  Yeah, yeah, yeah, why all the variables when we could just set them down in the module?  Because, I like to separate the input from the machinery.
 
@@ -45,11 +45,11 @@ variable "worker_instance_type" {
 }
 ```
 
-Feel free to customize as needed.  The virtual machine sizing is based on my past experience, but you might be able to tighten things up on disk and/or instance size and run an acceptable cluster.  Alternatively, if you want to build clusters with more nodes, go for it!  These are **practice clusters**.
+Feel free to customize as needed.  The virtual machine sizing is based on my past experience, but you might be able to tighten things up on disk and/or instance size and run an acceptable cluster.  Alternatively, if you want to build clusters with more nodes, go for it!  Remember, these are **practice clusters**.
 
 ## References
 
-[Terraform code](main.tf)
+[Terraform code](terraform/main.tf)
 
 [kubernetes.io: Bootstrapping clusters with kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/)
 
@@ -139,7 +139,7 @@ more main.tf
 
 ```
 
-[Terraform code](main.tf)
+[Terraform code](terraform/main.tf)
 
 You can see that the code is configurable via the numerous variables at the beginning of the file.  By default, a cluster will be created with a single control plane node and two worker nodes.  Feel free to adjust the values as you see fit.
 
@@ -261,9 +261,9 @@ cluster_private_key_openssh = <sensitive>
 
 With a clean Terraform execution under our belt, we can proceed and check for our virtual machines using the AWS console or CLI.
 
-![We have nodes!](We_have_nodes.png)
+![We have nodes!](images/We_have_nodes.png)
 
-***Our three nodes are ready!  For now, leave your cluster up!***
+***Our three nodes are ready!  For now, leave your nodes up!***
 
 ### EXAMPLE: Tear Down the Nodes Using Terraform
 
@@ -309,7 +309,7 @@ Destroy complete! Resources: 18 destroyed.
 
 ***Again, for now, leave your cluster up, or deploy a fresh set of nodes.  Let's build a Kubernetes cluster!***
 
-## Deploy a Kubernetes Cluster on Our KVM Virtual Machines (Nodes)
+## Deploy a Kubernetes Cluster on Our Nodes
 
 To get started, we're going to log into each of our nodes with a separate connection (window/tab/etc), and become the `root` user.
 
