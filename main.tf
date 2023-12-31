@@ -370,6 +370,7 @@ resource "aws_instance" "control_plane" {
   user_data = <<EOF
 #!/usr/bin/bash
 echo "${tls_private_key.cluster_key.private_key_openssh}" > /home/ubuntu/cluster_key.priv
+echo "${tls_private_key.cluster_key.private_key_pem}" > /home/ubuntu/cluster_key.pem
 echo "${tls_private_key.cluster_key.public_key_pem}" > /home/ubuntu/cluster_key.pub
 chmod 600 /home/ubuntu/cluster_key.*
 chown ubuntu:ubuntu /home/ubuntu/cluster_key.*
@@ -423,6 +424,7 @@ resource "aws_instance" "worker" {
   user_data = <<EOF
 #!/usr/bin/bash
 echo "${tls_private_key.cluster_key.private_key_openssh}" > /home/ubuntu/cluster_key.priv
+echo "${tls_private_key.cluster_key.private_key_pem}" > /home/ubuntu/cluster_key.pem
 echo "${tls_private_key.cluster_key.public_key_pem}" > /home/ubuntu/cluster_key.pub
 chmod 600 /home/ubuntu/cluster_key.*
 chown ubuntu:ubuntu /home/ubuntu/cluster_key.*
