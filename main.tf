@@ -5,6 +5,20 @@
 # Last updated 12/30/2023
 # -------------------------
 
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
+# Configure the AWS Provider
+provider "aws" {
+  region = aws_region
+}
+
 # ========================
 # AMI Finder - Latest Ubuntu 22.04
 # ========================
