@@ -309,7 +309,7 @@ resource "aws_security_group" "elb_control_plane" {
 
 resource "aws_instance" "control_plane" {
   count         = var.control_plane_count
-  ami           = data.aws_ami.ubuntu_ami
+  ami           = data.aws_ami.ubuntu_ami.id
   instance_type = var.control_plane_instance_type
   subnet_id     = aws_subnet.course_subnet.id
   key_name      = var.control_plane_key
@@ -356,7 +356,7 @@ EOF
 
 resource "aws_instance" "worker" {
   count         = var.worker_count
-  ami           = data.aws_ami.ubuntu_ami
+  ami           = data.aws_ami.ubuntu_ami.id
   instance_type = var.worker_instance_type
   subnet_id     = aws_subnet.course_subnet.id
   key_name      = var.worker_key
