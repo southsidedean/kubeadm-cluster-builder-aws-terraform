@@ -103,8 +103,8 @@ output "cluster_key_name" {
   value = "${trimspace(aws_key_pair.cluster_key.key_name)}"
 }
 
-output "cluster_key_pem" {
-  value = "${trimspace(tls_private_key.cluster_key.public_key_pem)}"
+output "cluster_key_openssh" {
+  value = "${trimspace(tls_private_key.cluster_key.public_key_openssh)}"
 }
 
 # -------------------------
