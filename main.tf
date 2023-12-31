@@ -2,8 +2,23 @@
 # Open source K8s lab deployment for CNCF labs
 # Ubuntu 22.04
 # Tom Dean
-# Last updated 12/22/2023
+# Last updated 12/30/2023
 # -------------------------
+
+# ========================
+# AMI Finder - Latest Ubuntu 22.04
+# ========================
+
+data "aws_ami" "ubuntu_ami" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["*ubuntu*22*04*server*"]
+  }
+
+  owners = ["099720109477"]
+}
 
 # -------------------------
 # Cluster Variables
@@ -32,12 +47,12 @@ variable "control_plane_instance_type" {
 
 variable "control_plane_ami" {
   type    = string
-  default = "ami-id"
+  default = aws_ami.ubuntu_ami
 }
 
 variable "control_plane_key" {
   type    = string
-  default = "cp-key"
+  default = "cluster_key"
 }
 
 variable "worker_count" {
@@ -47,17 +62,17 @@ variable "worker_count" {
 
 variable "worker_instance_type" {
   type    = string
-  default = "t3.xlarge"
+  default = "t3.large"
 }
 
 variable "worker_ami" {
   type    = string
-  default = "ami-id"
+  default = aws_ami.ubuntu_ami
 }
 
 variable "worker_key" {
   type    = string
-  default = "wrk-key"
+  default = "cluster_key"
 }
 
 # -------------------------
@@ -76,41 +91,26 @@ variable "route_destination_cidr_block" {
 
 variable "class_name" {
   type    = string
-  default = "CKA"
+  default = "CKA/D"
 }
 
 # -------------------------
-# Keypair Resources: student_key
+# Keypair Resources: cluster_key
 # This is the keypair for the student to use for labs
 # -------------------------
 
-resource "tls_private_key" "student_key" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
+resource "tls_private_key" "cluster_key" {
+  algorithm = "ED25519"
+  ecdsa_curve = "P256"
 }
 
-resource "aws_key_pair" "student_key" {
-  key_name_prefix = "student_key_"
-  public_key      = tls_private_key.student_key.public_key_openssh
+resource "aws_key_pair" "cluster_key" {
+  key_name_prefix = "cluster_key_"
+  public_key      = tls_private_key.cluster_key.public_key_openssh
 }
 
-output "student_key" {
-  value = aws_key_pair.student_key.key_name
-}
-
-# -------------------------
-# Keypair Resources: cs-key
-# This is the keypair provided by CloudShare for console connections
-# It is attached to the Bootstrap
-# Let's pull some information on this key
-# -------------------------
-
-data "aws_key_pair" "cs-key-existing" {
-  key_name = "cs-key"
-}
-
-output "cs-key-data" {
-  value = data.aws_key_pair.cs-key-existing
+output "cluster_key" {
+  value = "$trimspace(aws_key_pair.cluster_key.key_name)"
 }
 
 # -------------------------
@@ -164,7 +164,7 @@ resource "aws_iam_role" "kubeadm-labs-role" {
   assume_role_policy   = data.aws_iam_policy_document.instance-assume-role-policy.json
   permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/BoundaryForAdministratorAccess"
   inline_policy {
-    name = "mesosphere-admin-policy"
+    name = "kubeadm-admin-policy"
     policy = jsonencode({
       Version = "2012-10-17"
       Statement = [
@@ -279,7 +279,7 @@ resource "aws_security_group" "common" {
   }
 }
 
-resource "aws_security_group" "course_ssh" {
+resource "aws_security_group" "cluster_ssh" {
   name        = "${var.class_name}-${local.cluster_name}-ssh"
   description = "Allow inbound SSH."
   vpc_id      = aws_vpc.course_vpc.id
@@ -297,7 +297,7 @@ resource "aws_security_group" "course_ssh" {
 
 resource "aws_security_group" "elb_control_plane" {
   name        = "${var.class_name}-${local.cluster_name}-cp"
-  description = "Allow traffic to konvoy control plane"
+  description = "Allow traffic to control plane"
   vpc_id      = aws_vpc.course_vpc.id
 
   ingress {
@@ -325,7 +325,7 @@ resource "aws_instance" "control_plane" {
   key_name      = var.control_plane_key
   vpc_security_group_ids = [
     aws_security_group.common.id,
-    aws_security_group.course_ssh.id,
+    aws_security_group.cluster_ssh.id,
     aws_security_group.elb_control_plane.id
   ]
   iam_instance_profile = aws_iam_instance_profile.kubeadm-labs-role-instance-profile.name
@@ -343,8 +343,8 @@ resource "aws_instance" "control_plane" {
     Cluster                                       = local.cluster_name,
     "kubernetes.io/cluster/${local.cluster_name}" = "owned",
     "kubernetes.io/cluster"                       = "${local.cluster_name}",
-    "konvoy/nodeRoles"                            = "control_plane",
-    ci-key-username                               = "ubuntu"
+    "kubeadm/nodeRoles"                            = "control_plane",
+    ci-key-username                               = "ec2-user"
   }
 
   lifecycle {
@@ -353,10 +353,10 @@ resource "aws_instance" "control_plane" {
 
   user_data = <<EOF
 #!/usr/bin/bash
-echo "${tls_private_key.student_key.private_key_pem}" > /home/ubuntu/student_key.pem
-echo "${tls_private_key.student_key.public_key_pem}" > /home/ubuntu/student_key.pub
-chmod 600 /home/ubuntu/student_key.pem
-chown ubuntu:ubuntu /home/ubuntu/student_key.*
+echo "${tls_private_key.cluster_key.private_key_pem}" > /home/ec2-user/cluster_key.pem
+echo "${tls_private_key.cluster_key.public_key_pem}" > /home/ec2-user/cluster_key.pub
+chmod 600 /home/ec2-user/cluster_key.pem
+chown ec2-user:ec2-user /home/ec2-user/cluster_key.*
 EOF
 }
 
@@ -372,7 +372,7 @@ resource "aws_instance" "worker" {
   key_name      = var.worker_key
   vpc_security_group_ids = [
     aws_security_group.common.id,
-    aws_security_group.course_ssh.id
+    aws_security_group.cluster_ssh.id
   ]
   iam_instance_profile        = aws_iam_instance_profile.kubeadm-labs-role-instance-profile.name
   associate_public_ip_address = true
@@ -396,8 +396,8 @@ resource "aws_instance" "worker" {
     Cluster                                       = local.cluster_name,
     "kubernetes.io/cluster/${local.cluster_name}" = "owned",
     "kubernetes.io/cluster"                       = "${local.cluster_name}",
-    "konvoy/nodeRoles"                            = "worker_node",
-    ci-key-username                               = "ubuntu"
+    "kubeadm/nodeRoles"                            = "worker_node",
+    ci-key-username                               = "ec2-user"
   }
 
   lifecycle {
@@ -406,10 +406,10 @@ resource "aws_instance" "worker" {
 
   user_data = <<EOF
 #!/usr/bin/bash
-echo "${tls_private_key.student_key.private_key_pem}" > /home/ubuntu/student_key.pem
-echo "${tls_private_key.student_key.public_key_pem}" > /home/ubuntu/student_key.pub
-chmod 600 /home/ubuntu/student_key.pem
-chown ubuntu:ubuntu /home/ubuntu/student_key.*
+echo "${tls_private_key.cluster_key.private_key_pem}" > /home/ec2-user/cluster_key.pem
+echo "${tls_private_key.cluster_key.public_key_pem}" > /home/ec2-user/cluster_key.pub
+chmod 600 /home/ec2-user/cluster_key.pem
+chown ec2-user:ec2-user /home/ec2-user/cluster_key.*
 sudo mkdir -p /mnt/disks/data-vol-01
 sudo mkfs.ext4 /dev/nvme1n1
 echo '/dev/nvme1n1 /mnt/disks/data-vol-01 ext4 defaults 0 2' | sudo tee -a /etc/fstab > /dev/null
