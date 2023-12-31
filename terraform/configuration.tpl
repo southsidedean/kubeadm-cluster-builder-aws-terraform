@@ -10,14 +10,17 @@ ${ cluster_private_key_openssh }
 [node-ssh-user]
 ubuntu
 
-[control-plane-ip-addresses]
-Public: ${ control_plane_public_ip }
-Private: ${ control_plane_private_ip }
+[control-plane-networking]
+Public DNS: ${ control_plane_public_dns }
+Public IP: ${ control_plane_public_ip }
+Private IP: ${ control_plane_private_ip }
 
-[worker-0-ip-addresses]
-Public: ${ worker_0_public_ip }
-Private: ${ worker_0_private_ip }
+[worker-0-networking]
+Public DNS: ${ worker_0_public_dns }
+Public IP: ${ worker_0_public_ip }
+Private IP: ${ worker_0_private_ip }
 
-[worker-1-ip-addresses]
-Public: ${ worker_1_public_ip }
-Private: ${ worker_1_private_ip }
+[worker-1-networking]
+Public DNS: ${ worker_1_public_dns }
+Public IP: ${ worker_1_public_ip }
+Private IP: ${ worker_1_private_ip }
