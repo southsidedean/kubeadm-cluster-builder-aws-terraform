@@ -100,7 +100,7 @@ resource "aws_key_pair" "cluster_key" {
 }
 
 output "cluster_key" {
-  value = "$trimspace(aws_key_pair.cluster_key.key_name)"
+  value = "${trimspace(aws_key_pair.cluster_key.key_name)}"
 }
 
 # -------------------------
