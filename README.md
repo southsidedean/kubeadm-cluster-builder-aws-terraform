@@ -1,5 +1,5 @@
 # kubeadm-cluster-builder-aws-terraform
-**Tom Dean - 12/22/2023**
+**Tom Dean - 12/30/2023**
 
 ## Introduction
 
@@ -11,50 +11,11 @@ For the past year and a half, I've had access to an AWS environment, with a GitL
 
 Now that I'm out on my own, and that fancy AWS lab environment is a thing of the past, I've been imagining a replacement of my own.
 
-I had a few requirements:
-
-- Keep the code in GitLab for development and personal use
-  - Use CI/CD: Adding this after the initial release
-    - Working this out in my GitLab environment in my home lab
-  - Periodically push the updated code to GitHub to share with the world
-- Use Terraform for automation
-   - Flexibility in configuration of cluster via variables
-- Leverage KVM/libvirt
-  - Execute workloads locally
-  - Avoid Cloud expenses
-- Keep the project simple and straightforward
-  - Iterate as needed
-- Build something I can use with the CNCF CKA/D courses
-  - Test and evaluate cluster build process/scripts
-    - LFS258 (CKA)
-    - LFD259 (CKAD)
-
 ***So, how do we get from here to there?***
-
-### The Solution: Terraform Module for KVM/Libvirt Virtual Machines
-
-During my research for this project, I stumbled across the [Terraform Module for KVM/Libvirt Virtual Machines](https://registry.terraform.io/modules/MonolithProjects/vm/libvirt/latest).
-
-**From the Hashicorp Terraform Registry:**
-
-"What it provides
-
-- creates one or more VMs
-- one NIC per domain, connected to the network using the bridge interface
-- setup network interface using DHCP or static configuration
-- cloud_init VM(s) configuration (Ubuntu+Netplan complient)
-- optionally add multiple extra disks
-- test the ssh connection"
-
-***Sounds good to me!***
-
-So, by using one invocation of the module for Control Plane hosts, and one for Worker nodes, we can build a flexible cluster configuration that we can configure for clusters of varying sizes and node counts.
-
-***So, how will we implement this?***
 
 ### The Details: A Single-File Terraform Solution
 
-[Terraform code](cka-test.tf)
+[Terraform code](main.tf)
 
 I like to K.I.S.S. (Keep It Simple, Stupid!) whenever possible, and this was a case where I could put everything into a single file.  Yeah, yeah, yeah, why all the variables when we could just set them down in the module?  Because, I like to separate the input from the machinery.
 
@@ -62,126 +23,32 @@ You can change all kinds of things in the variables.
 
 **Node count, by node type:**
 ```bash
-# Cluster sizing: minimum one of each!
-# We can set the number of control plane and worker nodes here
 
-variable "control_plane_nodes" {
-  type = number
-  default = 1
-}
-
-variable "worker_nodes" {
-  type = number
-  default = 2
-}
 ```
 
 **Node name prefix, by node type:**
 ```bash
-# Hostname prefixes
-# This controls how the hostnames are generated
 
-variable "cp_prefix" {
-  type = string
-  default = "control-plane-"
-}
-
-variable "worker_prefix" {
-  type = string
-  default = "worker-node-"
-}
 ```
 
 **Node sizing, by node type:**
 ```bash
-# Node sizing
-# Start with the control planes
 
-variable "cp_cpu" {
-  type = number
-  default = 2
-}
-
-variable "cp_disk" {
-  type = number
-  default = 25
-}
-
-variable "cp_memory" {
-  type = number
-  default = 8192
-}
-
-# On to the worker nodes
-
-variable "worker_cpu" {
-  type = number
-  default = 2
-}
-
-variable "worker_disk" {
-  type = number
-  default = 25
-}
-
-variable "worker_memory" {
-  type = number
-  default = 8192
-}
 ```
 
 **Disk pool, by node type:**
 ```bash
-# Disk Pool to use
-# Control Plane
 
-variable "cp_diskpool" {
-  type = string
-  default = "default"
-}
-
-# Worker Nodes
-
-variable "worker_diskpool" {
-  type = string
-  default = "default"
-}
 ```
 
 **User/Key information, all nodes:**
 ```bash
-# User / Key information
-# Same across all nodes, customize if you wish
 
-variable "privateuser" {
-  type = string
-  default = "ubuntu"
-}
-
-variable "privatekey" {
-  type = string
-  default = "~/.ssh/id_ed25519"
-}
-
-variable "pubkey" {
-  type = string
-  default = "~/.ssh/id_ed25519.pub"
-}
 ```
 
 **Other information, all nodes:**
 ```bash
-# Other node configuration
 
-variable "timezone" {
-  type = string
-  default = "CST"
-}
-
-variable "osimg" {
-  type = string
-  default = "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
-}
 ```
 
 Feel free to customize as needed.  The virtual machine sizing is based on the requirements for the CNCF LFD259 course, but you might be able to tighten things up on disk and memory and run an acceptable cluster.  Alternatively, if you want to build clusters with more nodes, go for it, if you have the resources!
@@ -190,132 +57,17 @@ How does it work?  The rest is the stuff you should never have to touch, just us
 
 **Configuring the Terraform provider:**
 ```bash
-# Set our Terraform provider here
-# We're going to use libvirt on our local machine
 
-terraform {
-  required_providers {
-    libvirt = {
-      source = "dmacvicar/libvirt"
-    }
-  }
-}
-
-provider "libvirt" {
-  uri = "qemu:///system"
-}
 ```
 
 **Build everything and report the details:**
 ```bash
-# Module for building our control plane nodes
 
-module "controlplane" {
-  source  = "MonolithProjects/vm/libvirt"
-  version = "1.10.0"
-
-  vm_hostname_prefix = var.cp_prefix
-  vm_count    = var.control_plane_nodes
-  memory      = var.cp_memory
-  vcpu        = var.cp_cpu
-  pool        = var.cp_diskpool
-  system_volume = var.cp_disk
-  dhcp        = true
-  ssh_admin   = var.privateuser
-  ssh_private_key = var.privatekey
-  ssh_keys    = [
-    file(var.pubkey),
-    ]
-  time_zone   = var.timezone
-  os_img_url  = var.osimg
-}
-
-# Module for building our worker nodes
-
-module "worker" {
-  source  = "MonolithProjects/vm/libvirt"
-  version = "1.10.0"
-
-  vm_hostname_prefix = var.worker_prefix
-  vm_count    = var.worker_nodes
-  memory      = var.worker_memory
-  vcpu        = var.worker_cpu
-  pool        = var.worker_diskpool
-  system_volume = var.worker_disk
-  dhcp        = true
-  ssh_admin   = var.privateuser
-  ssh_private_key = var.privatekey
-  ssh_keys    = [
-    file(var.pubkey),
-    ]
-  time_zone   = var.timezone
-  os_img_url  = var.osimg
-}
-
-output "control-planes" {
-  value = module.controlplane
-}
-
-output "worker-nodes" {
-  value = module.worker
-}
 ```
-
-### Hardware Details: Lab in a Box Server
-
-I have a **Dell Precision T5500** workstation sitting under my desk, which I recently upgraded:
-
-- Ubuntu 22.04
-- Dual six-core Xeons
-- Plenty of storage
-    - RAID-1 SSD for system: 250GB
-    - RAID-1 HDD for data: 6TB
-- Dual 1GB network connections
-    - Public/General network
-    - Private/Data/Application Network
-- 72GB of RAM
-- Decent GPU, possible future use?
-
-The workstation was already up and running with Ubuntu 22.04, serving as my "Lab in a Box" server:
-
-- GitLab: *Keep it local!*
-    - Place to do primary development
-        - Release projects/content on GitHub
-    - Local GitLab instance
-    - Publically accessible (*by me*)
-    - CI/CD
-        - KVM/`libvirt` runner
-- Terraform
-    - Write automation for labs and projects
-    - Execute workloads on KVM/`libvirt`
-- Packer
-    - Create images for projects
-    - Also use `virt-builder` and Image Builder as needed
-- Ansible
-    - Might use in future projects, or for lab infrastructure
-- Cockpit
-    - Web-based server information and management
-    - For when you want to treat your "lab in the box" as an appliance and skip the CLI
-
-Terraform and KVM/`libvirt` are already installed and configured on my server.  All I needed to do was to enable `dnsmasq` and change the subnet on the `default` KVM network.
-
-***Adding the CKA/D Cluster Builder functionality should be rather straightforward.  Let's see how we do it!***
 
 ## References
 
-[GitHub: cka-d-cluster-builder-lab](https://github.com/southsidedean/cka-d-cluster-builder-lab)
-
-[Terraform code](cka-test.tf)
-
-[GitHub: self-hosted-gitlab-libvirt](https://github.com/southsidedean/self-hosted-gitlab-libvirt)
-
-[Hashicorp Terraform Registry: Terraform Module for KVM/Libvirt Virtual Machines](https://registry.terraform.io/modules/MonolithProjects/vm/libvirt/latest)
-
-[GitHub: dmacvicar/terraform-provider-libvirt](https://github.com/dmacvicar/terraform-provider-libvirt)
-
-[GitHub: MonolithProjects/terraform-libvirt-vm](https://github.com/MonolithProjects/terraform-libvirt-vm/tree/1.10.0)
-
-[Hashicorp Terraform Registry: Libvirt Provider](https://registry.terraform.io/providers/multani/libvirt/latest/docs)
+[Terraform code](main.tf)
 
 [kubernetes.io: Bootstrapping clusters with kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/)
 
@@ -353,209 +105,53 @@ You should get the installed version of Terraform back.
 
 ***Ok, Terraform is good to go.  Let's check KVM.***
 
-### KVM / `libvirt`
+### AWS CLI
 
-[Ubuntu: libvirt](https://ubuntu.com/server/docs/virtualization-libvirt)
 
-[How To Install KVM Hypervisor on Ubuntu 22.04|20.04](https://computingforgeeks.com/install-kvm-hypervisor-on-ubuntu-linux/)
 
-[Red Hat: Getting started with virtualization](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_virtualization/getting-started-with-virtualization-in-rhel-8_configuring-and-managing-virtualization#enabling-virtualization-in-rhel8_virt-getting-started)
-
-[Creating a Directory-based Storage Pool with virsh](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/virtualization_administration_guide/sect-virtualization-storage_pools-creating-local_directories-virsh)
-
-At the bottom of the "Lab in a Box" stack, our foundation, is `libvirt`.  We're going to use it to execute our Terraform workloads.
-
-The exact set of steps required to install the KVM/`libvirt` components will vary, based on your Linux distribution.  I've included links for Ubuntu and RHEL variants above, but you should be able to Google it and get instructions.  Remember, make sure you can install GitLab on your distribution as well.  If you're using some obscure distribution, you might be out of luck.
-
-**Once you have KVM/`libvirt` installed, let's give it a test:**
+**Once you have the AWS CLI installed, let's give it a test:**
 ```bash
-virsh --help | more
 
 ```
 
-You should get help for the `virsh` command-line utility, which is what we use to manage our virtual machine environment.
+### Git Clone the `kubeadm-cluster-builder-aws-terraform` Code
 
-**Let's check our system for virtual machines:**
-```bash
-virsh list --all
+[GitHub: kubeadm-cluster-builder-aws-terraform](https://github.com/southsidedean/kubeadm-cluster-builder-aws-terraform)
 
-```
-
-***We shouldn't see any virtual machines at this point, unless you have some running already, of course.  We can move on to configuring our `default` `libvirt` network.***
-
-### KVM: Configure `default` `libvirt` Network
-
-In order for our cluster to work, we need proper name resolution on our `default` bridge network.  We can accomplish this by configuring `dnsmasq` on our `default` bridge network.
-
-**Let's take a look at our `default` bridge network:**
-```bash
-virsh net-dumpxml default
-
-```
-
-I'm going to show you my 'finished' network configuration below.
-
-**EXAMPLE OUTPUT:**
-```bash
-<network>
-  <name>default</name>
-  <uuid>1157d479-7b7b-4c4e-b005-989d13067393</uuid>
-  <forward mode='nat'>
-    <nat>
-      <port start='1024' end='65535'/>
-    </nat>
-  </forward>
-  <bridge name='virbr0' stp='on' delay='0'/>
-  <mac address='52:54:00:06:61:f9'/>
-  <domain name='k8s.local' localOnly='yes'/>
-  <ip address='10.0.1.1' netmask='255.255.255.0'>
-    <dhcp>
-      <range start='10.0.1.2' end='10.0.1.254'/>
-    </dhcp>
-  </ip>
-</network>
-```
-
-**My network has the following changes from a 'stock' implementation with `libvirt`:**
-
-- I've changed the network from `192.168.122.0` to `10.0.1.0`, which is not in use on my network.  The requirements for the CKA/D environments for the CNCF CKA/D courses specifies to NOT use the `192.168` network for nodes.
-- I've enabled `dnsmasq`, with the line `<domain name='k8s.local' localOnly='yes'/>`
-  - Local domain is `k8s.local`
-
-*If you need to edit your network, use the following process.  Use the example configuration above as a guide.*
-
-**Take down the `default` network:**
-```bash
-virsh net-destroy default
-
-```
-
-**Edit the `default` network:**
-```bash
-virsh net-edit default
-
-```
-
-*Make your edits as needed.*
-
-**Deploy the new `default` network configuration:**
-```bash
-virsh net-start default
-
-```
-
-*I would do this without any virtual machines deployed to the `default` network.*
-
-**Again, if you want to do one final check of your `default` network configuration:**
-```bash
-virsh net-dumpxml default
-
-```
-
-***Okay, our virtual network is configured.  What next?***
-
-### KVM: Configure `default` `libvirt` Storage Pool
-
-[Creating a Directory-based Storage Pool with virsh](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/virtualization_administration_guide/sect-virtualization-storage_pools-creating-local_directories-virsh)
-
-You're going to need a storage pool for your virtual machines.  The Terraform file is configured to use the `default` storage pool by default.  You can change it in the variables if you want to use a different pool.
-
-If you need to create a storage pool, reference [Creating a Directory-based Storage Pool with virsh](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/virtualization_administration_guide/sect-virtualization-storage_pools-creating-local_directories-virsh).  It'll get you up and running in no time.
-
-**Check for the `default` storage pool:**
-```bash
-virsh pool-list
-
-```
-
-If you have one or more storage pools configured, you will see them in the output.
-
-**SAMPLE OUTPUT:**
-```bash
- Name      State    Autostart
--------------------------------
- default   active   yes
- images    active   yes
-```
-
-**Checking the `default` storage pool configuration:**
-```bash
-virsh pool-dumpxml default
-```
-
-**SAMPLE OUTPUT:**
-```bash
-<pool type='dir'>
-  <name>default</name>
-  <uuid>16e25a71-f1f5-4a15-bad7-b8224ce22a38</uuid>
-  <capacity unit='bytes'>494427144192</capacity>
-  <allocation unit='bytes'>28672</allocation>
-  <available unit='bytes'>494427115520</available>
-  <source>
-  </source>
-  <target>
-    <path>/media/virtual-machines</path>
-    <permissions>
-      <mode>0775</mode>
-      <owner>1000</owner>
-      <group>141</group>
-    </permissions>
-  </target>
-</pool>
-```
-
-You can see that I've configured my `default` storage pool as a directory-based pool, that is backed by a LVM volume mounted at `/media/virtual-machines`:
-```bash
-Filesystem                                  Size  Used Avail Use% Mounted on
-/dev/mapper/monolith_data-virtual_machines  461G   28K  438G   1% /media/virtual-machines
-```
-
-***Now that you have everything installed and configured, let's get the code!***
-
-### Git Clone the `cka-d-cluster-builder-lab` Code
-
-[GitHub: cka-d-cluster-builder-lab](https://github.com/southsidedean/cka-d-cluster-builder-lab)
-
-Head on over to the `cka-d-cluster-builder-lab` GitHub repository in the link above.  Go ahead and clone the repository to a directory of your choice.
+Head on over to the `kubeadm-cluster-builder-aws-terraform` GitHub repository in the link above.  Go ahead and clone the repository to a directory of your choice.
 
 **Clone repository:**
 ```bash
-git clone https://github.com/southsidedean/cka-d-cluster-builder-lab.git
+git clone https://github.com/southsidedean/kubeadm-cluster-builder-aws-terraform.git
 
 ```
 
 **SAMPLE OUTPUT:**
 ```bash
-Cloning into 'cka-d-cluster-builder-lab'...
-remote: Enumerating objects: 18, done.
-remote: Counting objects: 100% (18/18), done.
-remote: Compressing objects: 100% (13/13), done.
-remote: Total 18 (delta 1), reused 18 (delta 1), pack-reused 0
-Receiving objects: 100% (18/18), 17.71 KiB | 954.00 KiB/s, done.
-Resolving deltas: 100% (1/1), done.
+
 ```
 
 **Change directory into the repository directory:**
 ```bash
-cd cka-d-cluster-builder-lab
+cd kubeadm-cluster-builder-aws-terraform
 
 ```
 
 **Let's take a look at the Terraform code:**
 ```bash
-more cka-test.tf
+more main.tf
 
 ```
 
-[Terraform code](cka-test.tf)
+[Terraform code](main.tf)
 
 You can see that the code is configurable via the numerous variables at the beginning of the file.  By default, a cluster will be created with a single control plane node and two worker nodes.  Feel free to adjust the values as you see fit.
 
 ***Ok, we're all ready to start deploying a cluster.  Let's go!***
 
-## Deploy a Kubernetes Cluster Using Terraform and KVM Virtualization
+## Deploy a Kubernetes Cluster Using Terraform and AWS
 
-### Deploy the KVM Virtual Machines Using Terraform
+### Deploy the Kubernetes Nodes Using Terraform
 
 Ok, let's deploy a cluster!
 
