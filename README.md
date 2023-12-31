@@ -255,7 +255,7 @@ cluster_private_key_openssh = <sensitive>
 
 With a clean Terraform execution under our belt, we can proceed and check for our virtual machines using the AWS console or CLI.
 
-
+![We have nodes!](We_have_nodes.png)
 
 ***Our three nodes are ready!  For now, leave your cluster up!***
 
