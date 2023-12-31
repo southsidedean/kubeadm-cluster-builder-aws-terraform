@@ -152,7 +152,7 @@ data "aws_iam_policy_document" "instance-assume-role-policy" {
 resource "aws_iam_role" "kubeadm-labs-role" {
   name                 = "kubeadm-labs-role"
   assume_role_policy   = data.aws_iam_policy_document.instance-assume-role-policy.json
-  permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/BoundaryForAdministratorAccess"
+#  permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/BoundaryForAdministratorAccess"
   inline_policy {
     name = "kubeadm-admin-policy"
     policy = jsonencode({
