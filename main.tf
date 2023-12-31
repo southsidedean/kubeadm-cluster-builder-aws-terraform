@@ -360,7 +360,7 @@ resource "aws_instance" "control_plane" {
     "kubernetes.io/cluster/${local.cluster_name}" = "owned",
     "kubernetes.io/cluster"                       = "${local.cluster_name}",
     "kubeadm/nodeRoles"                            = "control_plane",
-    ci-key-username                               = "ec2-user"
+    ci-key-username                               = "ubuntu"
   }
 
   lifecycle {
@@ -369,10 +369,10 @@ resource "aws_instance" "control_plane" {
 
   user_data = <<EOF
 #!/usr/bin/bash
-echo "${tls_private_key.cluster_key.private_key_pem}" > /home/ec2-user/cluster_key.pem
-echo "${tls_private_key.cluster_key.public_key_pem}" > /home/ec2-user/cluster_key.pub
-chmod 600 /home/ec2-user/cluster_key.pem
-chown ec2-user:ec2-user /home/ec2-user/cluster_key.*
+echo "${tls_private_key.cluster_key.private_key_pem}" > /home/ubuntu/cluster_key.pem
+echo "${tls_private_key.cluster_key.public_key_pem}" > /home/ubuntu/cluster_key.pub
+chmod 600 /home/ubuntu/cluster_key.pem
+chown ubuntu:ubuntu /home/ubuntu/cluster_key.*
 EOF
 }
 
@@ -413,7 +413,7 @@ resource "aws_instance" "worker" {
     "kubernetes.io/cluster/${local.cluster_name}" = "owned",
     "kubernetes.io/cluster"                       = "${local.cluster_name}",
     "kubeadm/nodeRoles"                            = "worker_node",
-    ci-key-username                               = "ec2-user"
+    ci-key-username                               = "ubuntu"
   }
 
   lifecycle {
@@ -422,10 +422,10 @@ resource "aws_instance" "worker" {
 
   user_data = <<EOF
 #!/usr/bin/bash
-echo "${tls_private_key.cluster_key.private_key_pem}" > /home/ec2-user/cluster_key.pem
-echo "${tls_private_key.cluster_key.public_key_pem}" > /home/ec2-user/cluster_key.pub
-chmod 600 /home/ec2-user/cluster_key.pem
-chown ec2-user:ec2-user /home/ec2-user/cluster_key.*
+echo "${tls_private_key.cluster_key.private_key_pem}" > /home/ubuntu/cluster_key.pem
+echo "${tls_private_key.cluster_key.public_key_pem}" > /home/ubuntu/cluster_key.pub
+chmod 600 /home/ubuntu/cluster_key.pem
+chown ubuntu:ubuntu /home/ubuntu/cluster_key.*
 sudo mkdir -p /mnt/disks/data-vol-01
 sudo mkfs.ext4 /dev/nvme1n1
 echo '/dev/nvme1n1 /mnt/disks/data-vol-01 ext4 defaults 0 2' | sudo tee -a /etc/fstab > /dev/null
