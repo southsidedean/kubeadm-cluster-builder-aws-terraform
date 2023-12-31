@@ -118,7 +118,7 @@ output "cluster_key_name" {
 }
 
 output "cluster_private_key_openssh" {
-  value = "${trimspace(tls_private_key.cluster_key.private_key_openssh)}"
+  value = tls_private_key.cluster_key.private_key_openssh
   sensitive = true
 }
 
