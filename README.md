@@ -153,7 +153,44 @@ terraform init
 
 **SAMPLE OUTPUT:**
 ```bash
+Initializing the backend...
 
+Initializing provider plugins...
+- Finding hashicorp/aws versions matching "~> 5.0"...
+- Finding latest version of hashicorp/random...
+- Finding latest version of hashicorp/tls...
+- Installing hashicorp/aws v5.31.0...
+- Installed hashicorp/aws v5.31.0 (signed by HashiCorp)
+- Installing hashicorp/random v3.6.0...
+- Installed hashicorp/random v3.6.0 (signed by HashiCorp)
+- Installing hashicorp/tls v4.0.5...
+- Installed hashicorp/tls v4.0.5 (signed by HashiCorp)
+
+Terraform has created a lock file .terraform.lock.hcl to record the provider
+selections it made above. Include this file in your version control repository
+so that Terraform can guarantee to make the same selections by default when
+you run "terraform init" in the future.
+
+Terraform has been successfully initialized!
+
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.
+```
+
+**Let's validate our Terraform code:**
+```bash
+terraform validate
+
+```
+
+**SAMPLE OUTPUT EXCERPT:**
+```bash
+Success! The configuration is valid.
 ```
 
 **Next, let's generate a Terraform plan:**
@@ -164,7 +201,18 @@ terraform plan -out cka-plan.plan
 
 **SAMPLE OUTPUT EXCERPT:**
 ```bash
+data.aws_iam_policy_document.instance-assume-role-policy: Reading...
+data.aws_caller_identity.current: Reading...
+data.aws_ami.ubuntu_ami: Reading...
+data.aws_iam_policy_document.instance-assume-role-policy: Read complete after 0s [id=2851119427]
+data.aws_caller_identity.current: Read complete after 0s [id=445551320589]
+data.aws_ami.ubuntu_ami: Read complete after 1s [id=ami-05fb0b8c1424f266b]
 
+Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
+  + create
+
+Terraform will perform the following actions:
+...
 ```
 
 This will show us what Terraform is going to build, and will validate our code for errors.  With no errors, let's proceed with a `terraform apply`.
@@ -179,22 +227,35 @@ Terraform will handle all the heavy lifting for us and will build the environmen
 
 **SAMPLE OUTPUT EXCERPT:**
 ```bash
+random_pet.pet: Creating...
+tls_private_key.cluster_key: Creating...
+random_pet.pet: Creation complete after 0s [id=unbiased-pelican]
+tls_private_key.cluster_key: Creation complete after 0s [id=981bec5bb3a104abcb8bdff01b8efb36058a9d29]
+aws_key_pair.cluster_key: Creating...
+aws_vpc.course_vpc: Creating...
+aws_iam_role.kubeadm-control-plane-role: Creating...
+aws_iam_role.kubeadm-worker-role: Creating...
+aws_key_pair.cluster_key: Creation complete after 0s [id=cluster_key_20231231050318681800000001]
+aws_iam_role.kubeadm-control-plane-role: Creation complete after 0s [id=kubeadm-control-plane-role]
+aws_iam_instance_profile.kubeadm-control-plane-role-instance-profile: Creating...
+aws_iam_role.kubeadm-worker-role: Creation complete after 0s [id=kubeadm-worker-role]
+aws_iam_instance_profile.kubeadm-worker-role-instance-profile: Creating...
+aws_iam_instance_profile.kubeadm-control-plane-role-instance-profile: Creation complete after 0s [id=kubeadm-control-plane-role-instance-profile]
+aws_iam_instance_profile.kubeadm-worker-role-instance-profile: Creation complete after 0s [id=kubeadm-worker-role-instance-profile]
 
+...
+
+Apply complete! Resources: 18 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+cluster_key_name = "cluster_key_20231231050318681800000001"
+cluster_private_key_openssh = <sensitive>
 ```
 
 With a clean Terraform execution under our belt, we can proceed and check for our virtual machines using the AWS console or CLI.
 
-**Let's check for our nodes:**
-```bash
 
-```
-
-You can also use the AWS console to verify your nodes are up and available, and retrieve the node details, including IP addresses.
-
-**SAMPLE OUTPUT:**
-```bash
-
-```
 
 ***Our three nodes are ready!  For now, leave your cluster up!***
 
@@ -210,7 +271,34 @@ terraform destroy -auto-approve
 
 **SAMPLE OUTPUT:**
 ```bash
+random_pet.pet: Refreshing state... [id=unbiased-pelican]
+tls_private_key.cluster_key: Refreshing state... [id=981bec5bb3a104abcb8bdff01b8efb36058a9d29]
+data.aws_caller_identity.current: Reading...
+data.aws_iam_policy_document.instance-assume-role-policy: Reading...
+aws_key_pair.cluster_key: Refreshing state... [id=cluster_key_20231231050318681800000001]
+aws_vpc.course_vpc: Refreshing state... [id=vpc-060f9245bc50a3217]
+data.aws_ami.ubuntu_ami: Reading...
+data.aws_iam_policy_document.instance-assume-role-policy: Read complete after 0s [id=2851119427]
+aws_iam_role.kubeadm-worker-role: Refreshing state... [id=kubeadm-worker-role]
+aws_iam_role.kubeadm-control-plane-role: Refreshing state... [id=kubeadm-control-plane-role]
+data.aws_caller_identity.current: Read complete after 0s [id=445551320589]
+aws_iam_instance_profile.kubeadm-worker-role-instance-profile: Refreshing state... [id=kubeadm-worker-role-instance-profile]
+aws_iam_instance_profile.kubeadm-control-plane-role-instance-profile: Refreshing state... [id=kubeadm-control-plane-role-instance-profile]
+data.aws_ami.ubuntu_ami: Read complete after 1s [id=ami-05fb0b8c1424f266b]
+aws_internet_gateway.default: Refreshing state... [id=igw-0bf71b672f8f5da82]
 
+...
+
+aws_subnet.course_subnet: Destruction complete after 0s
+aws_iam_role.kubeadm-worker-role: Destruction complete after 0s
+aws_security_group.cluster_ssh: Destruction complete after 0s
+aws_security_group.common: Destruction complete after 0s
+aws_vpc.course_vpc: Destroying... [id=vpc-060f9245bc50a3217]
+aws_vpc.course_vpc: Destruction complete after 1s
+random_pet.pet: Destroying... [id=unbiased-pelican]
+random_pet.pet: Destruction complete after 0s
+
+Destroy complete! Resources: 18 destroyed.
 ```
 
 ***Again, for now, leave your cluster up, or deploy a fresh set of nodes.  Let's build a Kubernetes cluster!***
@@ -223,16 +311,19 @@ To get started, we're going to log into each of our nodes with a separate connec
 ```bash
 terraform output cluster_private_key_openssh | grep -v EOT > cluster_key.priv
 chmod 600 cluster_key.priv
+
 ```
 
 **Log in to each node using SSH:**
 ```bash
 ssh -i cluster_key.priv ubuntu@<NODE_PUBLIC_IP_ADDRESS>
+
 ```
 
 **Become the `root` user on all nodes:**
 ```bash
 sudo su
+
 ```
 
 When deploying a Kubernetes cluster, you have choices with regard to your container runtime.  I'm writing up TWO options, but feel free to experiment!
