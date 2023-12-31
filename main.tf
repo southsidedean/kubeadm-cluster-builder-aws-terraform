@@ -1,12 +1,13 @@
 # -------------------------
-# Open source K8s lab deployment for CNCF labs
+# Open source K8s lab deployment
+# for CNCF CKA/D labs
 # Ubuntu 22.04
 # Tom Dean
 # Last updated 12/30/2023
 # -------------------------
 
 # ========================
-# Set Terraform Provider
+# Set AWS Terraform Provider
 # ========================
 
 terraform {
@@ -161,23 +162,31 @@ data "aws_iam_policy_document" "instance-assume-role-policy" {
 }
 
 # -------------------------
-# Create kubeadm-labs-role
-# Very liberal, with guardrails set by the permissions_boundary
+# Create kubeadm-control-plane-roles
+# Control Plane Policy
 # -------------------------
 
-resource "aws_iam_role" "kubeadm-labs-role" {
-  name                 = "kubeadm-labs-role"
+resource "aws_iam_role" "kubeadm-control-plane-role" {
+  name                 = "kubeadm-control-plane-role"
   assume_role_policy   = data.aws_iam_policy_document.instance-assume-role-policy.json
-#  permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/BoundaryForAdministratorAccess"
   inline_policy {
-    name = "kubeadm-admin-policy"
+    name = "kubeadm-control-plane-policy"
     policy = jsonencode({
       Version = "2012-10-17"
       Statement = [
         {
-          Sid      = ""
           Effect   = "Allow"
-          Action   = ["*"]
+          Action   = [
+            "ec2:*",
+            "elasticloadbalancing:*",
+            "ecr:GetAuthorizationToken",
+            "ecr:BatchCheckLayerAvailability",
+            "ecr:GetDownloadUrlForLayer",
+            "ecr:GetRepositoryPolicy",
+            "ecr:DescribeRepositories",
+            "ecr:ListImages",
+            "ecr:BatchGetImage"
+            ]
           Resource = "*"
         }
       ]
@@ -186,14 +195,51 @@ resource "aws_iam_role" "kubeadm-labs-role" {
 }
 
 # -------------------------
-# IAM Instance Profile
-# This is where we attach our kubeadm-labs-role Role to our kubeadm-labs-role-instance-profile Instance Profile
-# The kubeadm-labs-role-instance-profile Instance Profile is consumed by the EC2 Instances (Control Plane/Worker)
+# Create kubeadm-worker-roles
+# Worker Node Policy
 # -------------------------
 
-resource "aws_iam_instance_profile" "kubeadm-labs-role-instance-profile" {
-  name = "kubeadm-labs-role-instance-profile"
-  role = aws_iam_role.kubeadm-labs-role.name
+resource "aws_iam_role" "kubeadm-worker-role" {
+  name                 = "kubeadm-worker-role"
+  assume_role_policy   = data.aws_iam_policy_document.instance-assume-role-policy.json
+  inline_policy {
+    name = "kubeadm-worker-policy"
+    policy = jsonencode({
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Effect   = "Allow"
+          Action   = [
+            "ec2:Describe*",
+            "ecr:GetAuthorizationToken",
+            "ecr:BatchCheckLayerAvailability",
+            "ecr:GetDownloadUrlForLayer",
+            "ecr:GetRepositoryPolicy",
+            "ecr:DescribeRepositories",
+            "ecr:ListImages",
+            "ecr:BatchGetImage"
+            ]
+          Resource = "*"
+        }
+      ]
+    })
+  }
+}
+
+
+# -------------------------
+# IAM Instance Profile
+# This is where we attach our kubeadm-control-plane-role and kubeadm-worker-role Roles to our kubeadm-control-plane-role-instance-profile and kubeadm-worker-role-instance-profile Instance Profiles
+# These Instance Profiles are consumed by the EC2 Instances (Control Plane/Worker)
+# -------------------------
+
+resource "aws_iam_instance_profile" "kubeadm-control-plane-role-instance-profile" {
+  name = "kubeadm-control-plane-role-instance-profile"
+  role = aws_iam_role.kubeadm-control-plane-role.name
+}
+resource "aws_iam_instance_profile" "kubeadm-worker-role-instance-profile" {
+  name = "kubeadm-worker-role-instance-profile"
+  role = aws_iam_role.kubeadm-worker-role.name
 }
 
 # -------------------------
@@ -334,7 +380,7 @@ resource "aws_instance" "control_plane" {
     aws_security_group.cluster_ssh.id,
     aws_security_group.elb_control_plane.id
   ]
-  iam_instance_profile = aws_iam_instance_profile.kubeadm-labs-role-instance-profile.name
+  iam_instance_profile = aws_iam_instance_profile.kubeadm-control-plane-role-instance-profile.name
 
   associate_public_ip_address = true
   root_block_device {
@@ -381,7 +427,7 @@ resource "aws_instance" "worker" {
     aws_security_group.common.id,
     aws_security_group.cluster_ssh.id
   ]
-  iam_instance_profile        = aws_iam_instance_profile.kubeadm-labs-role-instance-profile.name
+  iam_instance_profile        = aws_iam_instance_profile.kubeadm-worker-role-instance-profile.name
   associate_public_ip_address = true
 
   root_block_device {
