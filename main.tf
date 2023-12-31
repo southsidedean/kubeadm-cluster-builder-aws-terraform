@@ -250,7 +250,8 @@ resource "aws_vpc" "course_vpc" {
   cidr_block = var.subnet_range
 
   tags = {
-    Name = "${var.class_name}-vpc-${local.cluster_name}"
+    Name = "${var.class_name}-vpc-${local.cluster_name}",
+    KubernetesCluster = local.cluster_name
   }
   enable_dns_support   = true
   enable_dns_hostnames = true
@@ -267,9 +268,10 @@ resource "aws_subnet" "course_subnet" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name                                          = "${var.class_name}-${local.cluster_name}-subnet"
-    "kubernetes.io/cluster"                       = local.cluster_name
-    "kubernetes.io/cluster/${local.cluster_name}" = "owned"
+    Name                                          = "${var.class_name}-${local.cluster_name}-subnet",
+    "kubernetes.io/cluster"                       = local.cluster_name,
+    "kubernetes.io/cluster/${local.cluster_name}" = "owned",
+    "KubernetesCluster"                           = local.cluster_name
   }
 }
 
@@ -289,9 +291,10 @@ resource "aws_route_table" "course_public_rt" {
   }
 
   tags = {
-    "Name" : "${var.class_name}-${local.cluster_name}-routetable",
-    "kubernetes.io/cluster/${local.cluster_name}" : "owned",
-    "kubernetes.io/cluster" : "${local.cluster_name}"
+    "Name"                                        = "${var.class_name}-${local.cluster_name}-routetable",
+    "kubernetes.io/cluster/${local.cluster_name}" = "owned",
+    "kubernetes.io/cluster"                       = "${local.cluster_name}",
+    "KubernetesCluster"                           = local.cluster_name
   }
 }
 
@@ -326,8 +329,9 @@ resource "aws_security_group" "common" {
   }
 
   tags = {
-    "kubernetes.io/cluster"                       = local.cluster_name
-    "kubernetes.io/cluster/${local.cluster_name}" = "owned"
+    "kubernetes.io/cluster"                       = local.cluster_name,
+    "kubernetes.io/cluster/${local.cluster_name}" = "owned",
+    "KubernetesCluster"                           = local.cluster_name
   }
 }
 
@@ -343,7 +347,8 @@ resource "aws_security_group" "cluster_ssh" {
     cidr_blocks = ["0.0.0.0/0"]
   }
   tags = {
-    Name = "${var.class_name}-${local.cluster_name}-sg-ssh"
+    Name                = "${var.class_name}-${local.cluster_name}-sg-ssh",
+    "KubernetesCluster" = local.cluster_name
   }
 }
 
@@ -360,7 +365,8 @@ resource "aws_security_group" "elb_control_plane" {
   }
 
   tags = {
-    Name = "${var.class_name}-${local.cluster_name}-cp"
+    Name                = "${var.class_name}-${local.cluster_name}-cp",
+    "KubernetesCluster" = local.cluster_name
   }
 }
 
@@ -393,6 +399,7 @@ resource "aws_instance" "control_plane" {
     Class                                         = var.class_name,
     Name                                          = "${var.class_name}-${local.cluster_name}-control-plane",
     Cluster                                       = local.cluster_name,
+    "KubernetesCluster"                           = local.cluster_name,
     "kubernetes.io/cluster/${local.cluster_name}" = "owned",
     "kubernetes.io/cluster"                       = "${local.cluster_name}",
     "kubeadm/nodeRoles"                            = "control_plane",
@@ -447,6 +454,7 @@ resource "aws_instance" "worker" {
     Class                                         = var.class_name,
     Name                                          = "${var.class_name}-${local.cluster_name}-worker-${count.index}",
     Cluster                                       = local.cluster_name,
+    "KubernetesCluster"                           = local.cluster_name,
     "kubernetes.io/cluster/${local.cluster_name}" = "owned",
     "kubernetes.io/cluster"                       = "${local.cluster_name}",
     "kubeadm/nodeRoles"                            = "worker_node",
