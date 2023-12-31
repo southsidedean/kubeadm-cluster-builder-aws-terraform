@@ -520,8 +520,8 @@ resource "local_file" "cluster_configuration" {
       cluster_name              = local.cluster_name,
       cluster_key_name          = "${trimspace(aws_key_pair.cluster_key.key_name)}",
       cluster_private_key_openssh = tls_private_key.cluster_key.private_key_openssh
-      control_plane_public_ips  = aws_instance.control_plane[0].public_ip,
-      control_plane_private_ips = aws_instance.control_plane[0].private_ip,
+      control_plane_public_ip   = aws_instance.control_plane[0].public_ip,
+      control_plane_private_ip  = aws_instance.control_plane[0].private_ip,
       worker_0_public_ip        = aws_instance.worker[0].public_ip,
       worker_0_private_ip       = aws_instance.worker[0].private_ip,
       worker_1_public_ip        = aws_instance.worker[1].public_ip,
