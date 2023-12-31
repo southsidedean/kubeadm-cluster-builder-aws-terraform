@@ -481,7 +481,7 @@ output "cluster_key_name" {
 
 output "cluster_private_key_openssh" {
   value = tls_private_key.cluster_key.private_key_openssh
-  sensitive = false
+  sensitive = true
 }
 
 output "control_plane_public_ip" {
