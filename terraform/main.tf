@@ -414,6 +414,7 @@ echo "${tls_private_key.cluster_key.private_key_pem}" > /home/ubuntu/cluster_key
 echo "${tls_private_key.cluster_key.public_key_pem}" > /home/ubuntu/cluster_key.pub
 chmod 600 /home/ubuntu/cluster_key.*
 chown ubuntu:ubuntu /home/ubuntu/cluster_key.*
+sudo systemctl reboot
 EOF
 }
 
@@ -464,6 +465,7 @@ echo "${tls_private_key.cluster_key.private_key_pem}" > /home/ubuntu/cluster_key
 echo "${tls_private_key.cluster_key.public_key_pem}" > /home/ubuntu/cluster_key.pub
 chmod 600 /home/ubuntu/cluster_key.*
 chown ubuntu:ubuntu /home/ubuntu/cluster_key.*
+sudo systemctl reboot
 EOF
 }
 
