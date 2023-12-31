@@ -45,11 +45,6 @@ variable "control_plane_instance_type" {
   default = "t3.large"
 }
 
-variable "control_plane_ami" {
-  type    = string
-  default = aws_ami.ubuntu_ami
-}
-
 variable "control_plane_key" {
   type    = string
   default = "cluster_key"
@@ -63,11 +58,6 @@ variable "worker_count" {
 variable "worker_instance_type" {
   type    = string
   default = "t3.large"
-}
-
-variable "worker_ami" {
-  type    = string
-  default = aws_ami.ubuntu_ami
 }
 
 variable "worker_key" {
@@ -319,7 +309,7 @@ resource "aws_security_group" "elb_control_plane" {
 
 resource "aws_instance" "control_plane" {
   count         = var.control_plane_count
-  ami           = var.control_plane_ami
+  ami           = var.aws_ami.ubuntu_ami
   instance_type = var.control_plane_instance_type
   subnet_id     = aws_subnet.course_subnet.id
   key_name      = var.control_plane_key
@@ -366,7 +356,7 @@ EOF
 
 resource "aws_instance" "worker" {
   count         = var.worker_count
-  ami           = var.worker_ami
+  ami           = var.aws_ami.ubuntu_ami
   instance_type = var.worker_instance_type
   subnet_id     = aws_subnet.course_subnet.id
   key_name      = var.worker_key
