@@ -494,6 +494,10 @@ output "control_plane_public_ip" {
   value = aws_instance.control_plane[0].public_ip
 }
 
+output "control_plane_private_dns" {
+  value = aws_instance.control_plane[0].private_dns
+}
+
 output "control_plane_private_ip" {
   value = aws_instance.control_plane[0].private_ip
 }
@@ -506,6 +510,10 @@ output "worker_0_public_ip" {
   value = aws_instance.worker[0].public_ip
 }
 
+output "worker_0_private_dns" {
+  value = aws_instance.worker[0].private_dns
+}
+
 output "worker_0_private_ip" {
   value = aws_instance.worker[0].private_ip
 }
@@ -516,6 +524,10 @@ output "worker_1_public_dns" {
 
 output "worker_1_public_ip" {
   value = aws_instance.worker[1].public_ip
+}
+
+output "worker_1_private_dns" {
+  value = aws_instance.worker[1].private_dns
 }
 
 output "worker_1_private_ip" {
@@ -537,11 +549,14 @@ resource "local_file" "cluster_configuration" {
       control_plane_public_dns  = aws_instance.control_plane[0].public_dns,
       control_plane_public_ip   = aws_instance.control_plane[0].public_ip,
       control_plane_private_ip  = aws_instance.control_plane[0].private_ip,
+      control_plane_private_dns  = aws_instance.control_plane[0].private_dns,
       worker_0_public_dns       = aws_instance.worker[0].public_dns,
       worker_0_public_ip        = aws_instance.worker[0].public_ip,
+      worker_0_private_dns       = aws_instance.worker[0].private_dns,
       worker_0_private_ip       = aws_instance.worker[0].private_ip,
       worker_1_public_dns       = aws_instance.worker[1].public_dns,
       worker_1_public_ip        = aws_instance.worker[1].public_ip,
+      worker_1_private_dns       = aws_instance.worker[1].private_dns,
       worker_1_private_ip       = aws_instance.worker[1].private_ip
     }
   )
