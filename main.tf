@@ -5,6 +5,10 @@
 # Last updated 12/30/2023
 # -------------------------
 
+# ========================
+# Set Terraform Provider
+# ========================
+
 terraform {
   required_providers {
     aws = {
@@ -14,7 +18,10 @@ terraform {
   }
 }
 
+# ========================
 # Configure the AWS Provider
+# ========================
+
 provider "aws" {
   region = var.aws_region
 }
@@ -95,7 +102,7 @@ variable "route_destination_cidr_block" {
 
 variable "class_name" {
   type    = string
-  default = "CKA/D"
+  default = "cka"
 }
 
 # -------------------------
