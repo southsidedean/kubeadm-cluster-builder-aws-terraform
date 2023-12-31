@@ -104,7 +104,7 @@ output "cluster_key_name" {
 }
 
 output "cluster_key_pem" {
-  value = "${trimspace(aws_key_pair.cluster_key.public_key_pem)}"
+  value = "${trimspace(tls_private_key.cluster_key.public_key_pem)}"
 }
 
 # -------------------------
