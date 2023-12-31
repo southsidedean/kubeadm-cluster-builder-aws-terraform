@@ -45,10 +45,10 @@ variable "control_plane_instance_type" {
   default = "t3.large"
 }
 
-variable "control_plane_key" {
-  type    = string
-  default = "cluster_key"
-}
+#variable "control_plane_key" {
+#  type    = string
+#  default = "cluster_key"
+#}
 
 variable "worker_count" {
   type    = number
@@ -60,10 +60,10 @@ variable "worker_instance_type" {
   default = "t3.large"
 }
 
-variable "worker_key" {
-  type    = string
-  default = "cluster_key"
-}
+#variable "worker_key" {
+#  type    = string
+#  default = "cluster_key"
+#}
 
 # -------------------------
 # Course wide VPC variables
@@ -312,7 +312,7 @@ resource "aws_instance" "control_plane" {
   ami           = data.aws_ami.ubuntu_ami.id
   instance_type = var.control_plane_instance_type
   subnet_id     = aws_subnet.course_subnet.id
-  key_name      = var.control_plane_key
+  key_name      = aws_key_pair.cluster_key
   vpc_security_group_ids = [
     aws_security_group.common.id,
     aws_security_group.cluster_ssh.id,
@@ -359,7 +359,7 @@ resource "aws_instance" "worker" {
   ami           = data.aws_ami.ubuntu_ami.id
   instance_type = var.worker_instance_type
   subnet_id     = aws_subnet.course_subnet.id
-  key_name      = var.worker_key
+  key_name      = aws_key_pair.cluster_key
   vpc_security_group_ids = [
     aws_security_group.common.id,
     aws_security_group.cluster_ssh.id
