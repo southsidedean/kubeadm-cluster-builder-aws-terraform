@@ -5,11 +5,9 @@
 
 ### The Need: A Quick and Repeatable Local Kubernetes Cluster Using AWS
 
-I've been studying for the Cloud Native Computing Foundation's CKA and CKAD certification exams for a while now.  Anyone who is familiar with these exams knows that, in order to practice, you're going to need a cluster.  Hands-on experience with Kubernetes clusters, of the `kubeadm` variety, is key to passing these exams.
+I had been studying for the Cloud Native Computing Foundation's CKA and CKAD certification exams for a while, and recently passed both exams.  Anyone who is familiar with these exams knows that, in order to practice your Kubernetes skills, you're going to need a cluster.  Hands-on experience with Kubernetes clusters, of the `kubeadm` variety, is key to passing the CKA.  You need to be experienced with deploying, break/fix and upgrading `kubeadm` clusters.
 
-For the past year and a half, I've had access to an AWS environment, with a GitLab repository, flashy CI/CD and Terraform/Packer to deliver one or more pre-provisioned Kubernetes environments for me to teach Kubernetes to students, or to practice Kubernetes solo.
-
-Now that I'm out on my own, and that fancy AWS lab environment is a thing of the past, I've been imagining a replacement of my own.
+What's needed is a pre-deployed set of Ubuntu Linux nodes that can be used to meet these needs.
 
 ***So, how do we get from here to there?***
 
@@ -19,51 +17,35 @@ Now that I'm out on my own, and that fancy AWS lab environment is a thing of the
 
 I like to K.I.S.S. (Keep It Simple, Stupid!) whenever possible, and this was a case where I could put everything into a single file.  Yeah, yeah, yeah, why all the variables when we could just set them down in the module?  Because, I like to separate the input from the machinery.
 
-You can change all kinds of things in the variables.
+You can change *all kinds of things* in the variables.
 
 **Node count, by node type:**
 ```bash
+variable "control_plane_count" {
+  type    = number
+  default = 1
+}
 
-```
-
-**Node name prefix, by node type:**
-```bash
-
+variable "worker_count" {
+  type    = number
+  default = 2
+}
 ```
 
 **Node sizing, by node type:**
 ```bash
+variable "control_plane_instance_type" {
+  type    = string
+  default = "t3.large"
+}
 
+variable "worker_instance_type" {
+  type    = string
+  default = "t3.large"
+}
 ```
 
-**Disk pool, by node type:**
-```bash
-
-```
-
-**User/Key information, all nodes:**
-```bash
-
-```
-
-**Other information, all nodes:**
-```bash
-
-```
-
-Feel free to customize as needed.  The virtual machine sizing is based on the requirements for the CNCF LFD259 course, but you might be able to tighten things up on disk and memory and run an acceptable cluster.  Alternatively, if you want to build clusters with more nodes, go for it, if you have the resources!
-
-How does it work?  The rest is the stuff you should never have to touch, just use the variables to change the configuration.
-
-**Configuring the Terraform provider:**
-```bash
-
-```
-
-**Build everything and report the details:**
-```bash
-
-```
+Feel free to customize as needed.  The virtual machine sizing is based on my past experience, but you might be able to tighten things up on disk and/or instance size and run an acceptable cluster.  Alternatively, if you want to build clusters with more nodes, go for it!  These are **practice clusters**.
 
 ## References
 
@@ -83,7 +65,7 @@ How does it work?  The rest is the stuff you should never have to touch, just us
 
 ## Prerequisites
 
-Before we get started, we're going to need to confirm that we have some things installed and configured.
+Before we get started, we're going to need to confirm that we have some things *installed and configured*.
 
 ### Terraform
 
@@ -107,7 +89,15 @@ You should get the installed version of Terraform back.
 
 ### AWS CLI
 
+[]()
 
+[]()
+
+[]()
+
+[]()
+
+You're going to need to have the AWS CLI installed and configured.  I've provided reference links for this.
 
 **Once you have the AWS CLI installed, let's give it a test:**
 ```bash
@@ -163,36 +153,7 @@ terraform init
 
 **SAMPLE OUTPUT:**
 ```bash
-Initializing the backend...
-Initializing modules...
-Downloading registry.terraform.io/MonolithProjects/vm/libvirt 1.10.0 for controlplane...
-- controlplane in .terraform/modules/controlplane
-Downloading registry.terraform.io/MonolithProjects/vm/libvirt 1.10.0 for worker...
-- worker in .terraform/modules/worker
 
-Initializing provider plugins...
-- Finding dmacvicar/libvirt versions matching ">= 0.7.0"...
-- Installing dmacvicar/libvirt v0.7.4...
-- Installed dmacvicar/libvirt v0.7.4 (self-signed, key ID 0833E38C51E74D26)
-
-Partner and community providers are signed by their developers.
-If you'd like to know more about provider signing, you can read about it here:
-https://www.terraform.io/docs/cli/plugins/signing.html
-
-Terraform has created a lock file .terraform.lock.hcl to record the provider
-selections it made above. Include this file in your version control repository
-so that Terraform can guarantee to make the same selections by default when
-you run "terraform init" in the future.
-
-Terraform has been successfully initialized!
-
-You may now begin working with Terraform. Try running "terraform plan" to see
-any changes that are required for your infrastructure. All Terraform commands
-should now work.
-
-If you ever set or change modules or backend configuration for Terraform,
-rerun this command to reinitialize your working directory. If you forget, other
-commands will detect it and remind you to do so if necessary.
 ```
 
 **Next, let's generate a Terraform plan:**
@@ -201,45 +162,9 @@ terraform plan -out cka-plan.plan
 
 ```
 
-**SAMPLE OUPUT EXCERPT:**
+**SAMPLE OUTPUT EXCERPT:**
 ```bash
-Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
-  + create
 
-Terraform will perform the following actions:
-
-  # module.controlplane.libvirt_cloudinit_disk.commoninit[0] will be created
-  + resource "libvirt_cloudinit_disk" "commoninit" {
-      + id             = (known after apply)
-      + name           = "control-plane-_init01.iso"
-      + network_config = <<-EOT
-            version: 2
-            ethernets:
-              ens3:
-                dhcp4: true
-...
-Plan: 11 to add, 0 to change, 0 to destroy.
-
-Changes to Outputs:
-  + control-planes = {
-      + ip_address = [
-          + null,
-        ]
-      + name       = [
-          + "control-plane-01",
-        ]
-    }
-  + worker-nodes   = {
-      + ip_address = [
-          + null,
-          + null,
-        ]
-      + name       = [
-          + "worker-node-01",
-          + "worker-node-02",
-        ]
-    }
-...
 ```
 
 This will show us what Terraform is going to build, and will validate our code for errors.  With no errors, let's proceed with a `terraform apply`.
@@ -254,79 +179,26 @@ Terraform will handle all the heavy lifting for us and will build the environmen
 
 **SAMPLE OUTPUT EXCERPT:**
 ```bash
-...
-module.worker.libvirt_domain.virt-machine[1] (remote-exec): Connected!
-module.worker.libvirt_domain.virt-machine[0] (remote-exec): Connected!
-module.controlplane.libvirt_domain.virt-machine[0] (remote-exec): Connected!
-module.controlplane.libvirt_domain.virt-machine[0] (remote-exec): Virtual Machine control-plane-01 is UP!
-module.controlplane.libvirt_domain.virt-machine[0] (remote-exec): Thu Apr 13 14:51:10 UTC 2023
-module.controlplane.libvirt_domain.virt-machine[0]: Creation complete after 1m18s [id=baf36a1a-7278-4ab8-9e7e-f1e525c566c0]
-module.worker.libvirt_domain.virt-machine[1] (remote-exec): Virtual Machine worker-node-02 is UP!
-module.worker.libvirt_domain.virt-machine[1] (remote-exec): Thu Apr 13 14:51:10 UTC 2023
-module.worker.libvirt_domain.virt-machine[0] (remote-exec): Virtual Machine worker-node-01 is UP!
-module.worker.libvirt_domain.virt-machine[0] (remote-exec): Thu Apr 13 14:51:10 UTC 2023
-module.worker.libvirt_domain.virt-machine[1]: Creation complete after 1m18s [id=e9b6593e-4af3-4246-8876-7d85badc6021]
-module.worker.libvirt_domain.virt-machine[0]: Creation complete after 1m18s [id=7d35804d-f4c8-46ca-9022-da63564d8cca]
 
-Apply complete! Resources: 11 added, 0 changed, 0 destroyed.
-
-Outputs:
-
-control-planes = {
-  "ip_address" = [
-    "10.0.1.46",
-  ]
-  "name" = [
-    "control-plane-01",
-  ]
-}
-worker-nodes = {
-  "ip_address" = [
-    "10.0.1.70",
-    "10.0.1.67",
-  ]
-  "name" = [
-    "worker-node-01",
-    "worker-node-02",
-  ]
-}
 ```
 
-With a clean Terraform execution under our belt, we can proceed and check for our virtual machines using the `virsh list` command.
+With a clean Terraform execution under our belt, we can proceed and check for our virtual machines using the AWS console or CLI.
 
-**Let's check our system for virtual machines:**
+**Let's check for our nodes:**
 ```bash
-virsh list --all
 
 ```
+
+You can also use the AWS console to verify your nodes are up and available, and retrieve the node details, including IP addresses.
 
 **SAMPLE OUTPUT:**
 ```bash
- Id   Name                                State
-----------------------------------------------------
- 30   worker-node-01                      running
- 31   worker-node-02                      running
- 32   control-plane-01                    running
-```
 
-**If you'd like to see the IP addresses for the nodes:**
-```bash
-virsh net-dhcp-leases default
-
-```
-
-**SAMPLE OUTPUT:**
-```bash
- Expiry Time           MAC address         Protocol   IP address      Hostname           Client ID or DUID
----------------------------------------------------------------------------------------------------------------------------------------------------
- 2023-04-13 18:08:08   52:54:00:52:46:16   ipv4       10.0.1.12/24    worker-node-01     ff:b5:5e:67:ff:00:02:00:00:ab:11:73:21:55:bd:43:84:fe:79
- 2023-04-13 18:08:07   52:54:00:9e:4f:d6   ipv4       10.0.1.72/24    control-plane-01   ff:b5:5e:67:ff:00:02:00:00:ab:11:c1:fb:9f:0e:b9:e7:4a:39
- 2023-04-13 18:08:08   52:54:00:f6:4a:bf   ipv4       10.0.1.184/24   worker-node-02     ff:b5:5e:67:ff:00:02:00:00:ab:11:e3:34:b8:fb:95:84:e5:82
 ```
 
 ***Our three nodes are ready!  For now, leave your cluster up!***
 
-### EXAMPLE: Tear Down the KVM Virtual Machines Using Terraform
+### EXAMPLE: Tear Down the Nodes Using Terraform
 
 When you're done with the cluster, you use the `terraform destroy` command to tear down the cluster.
 
@@ -338,17 +210,7 @@ terraform destroy -auto-approve
 
 **SAMPLE OUTPUT:**
 ```bash
-...
-module.worker.libvirt_volume.volume-qcow2[0]: Destruction complete after 0s
-module.worker.libvirt_volume.volume-qcow2[1]: Destruction complete after 1s
-module.controlplane.libvirt_cloudinit_disk.commoninit[0]: Destruction complete after 1s
-module.worker.libvirt_volume.base-volume-qcow2[0]: Destroying... [id=/media/virtual-machines/worker-node--base.qcow2]
-module.controlplane.libvirt_volume.volume-qcow2[0]: Destruction complete after 1s
-module.controlplane.libvirt_volume.base-volume-qcow2[0]: Destroying... [id=/media/virtual-machines/control-plane--base.qcow2]
-module.worker.libvirt_volume.base-volume-qcow2[0]: Destruction complete after 0s
-module.controlplane.libvirt_volume.base-volume-qcow2[0]: Destruction complete after 0s
 
-Destroy complete! Resources: 11 destroyed.
 ```
 
 ***Again, for now, leave your cluster up, or deploy a fresh set of nodes.  Let's build a Kubernetes cluster!***
@@ -357,9 +219,15 @@ Destroy complete! Resources: 11 destroyed.
 
 To get started, we're going to log into each of our nodes with a separate connection (window/tab/etc), and become the `root` user.
 
+**First, we'll need to retrieve the SSH key using Terraform:**
+```bash
+terraform output cluster_private_key_openssh | grep -v EOT > cluster_key.priv
+chmod 600 cluster_key.priv
+```
+
 **Log in to each node using SSH:**
 ```bash
-ssh -i ~/.ssh/id_ed25519 ubuntu@<NODE_IP_ADDRESS>
+ssh -i cluster_key.priv ubuntu@<NODE_PUBLIC_IP_ADDRESS>
 ```
 
 **Become the `root` user on all nodes:**

@@ -66,11 +66,6 @@ variable "control_plane_instance_type" {
   default = "t3.large"
 }
 
-#variable "control_plane_key" {
-#  type    = string
-#  default = "cluster_key"
-#}
-
 variable "worker_count" {
   type    = number
   default = 2
@@ -80,11 +75,6 @@ variable "worker_instance_type" {
   type    = string
   default = "t3.large"
 }
-
-#variable "worker_key" {
-#  type    = string
-#  default = "cluster_key"
-#}
 
 # -------------------------
 # Course wide VPC variables
