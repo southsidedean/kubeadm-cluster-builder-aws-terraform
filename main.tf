@@ -134,9 +134,13 @@ locals {
   cluster_name = random_pet.pet.id
 }
 
+output "cluster_name" {
+  value = local.cluster_name
+}
+
 # -------------------------
 # Pull AWS Account ID for future use
-# We'll need this!!
+# We might need this
 # -------------------------
 
 data "aws_caller_identity" "current" {}

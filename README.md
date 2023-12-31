@@ -118,7 +118,13 @@ git clone https://github.com/southsidedean/kubeadm-cluster-builder-aws-terraform
 
 **SAMPLE OUTPUT:**
 ```bash
-
+Cloning into 'kubeadm-cluster-builder-aws-terraform'...
+remote: Enumerating objects: 103, done.
+remote: Counting objects: 100% (103/103), done.
+remote: Compressing objects: 100% (72/72), done.
+remote: Total 103 (delta 34), reused 100 (delta 31), pack-reused 0
+Receiving objects: 100% (103/103), 231.60 KiB | 3.09 MiB/s, done.
+Resolving deltas: 100% (34/34), done.
 ```
 
 **Change directory into the repository directory:**
