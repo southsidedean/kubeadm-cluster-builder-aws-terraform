@@ -1,0 +1,23 @@
+# Keeps the actions in .github/workflows (pinned to exact commits) and the Terraform
+# providers in terraform/main.tf up to date.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    # One pull request for all of them, and only for releases at least a week old.
+    groups:
+      actions:
+        patterns: ["*"]
+    cooldown:
+      default-days: 7
+  - package-ecosystem: terraform
+    directory: /terraform
+    schedule:
+      interval: monthly
+    groups:
+      providers:
+        patterns: ["*"]
+    cooldown:
+      default-days: 7
