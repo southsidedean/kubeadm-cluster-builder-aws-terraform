@@ -67,45 +67,120 @@ Feel free to customize as needed.  The virtual machine sizing is based on my pas
 
 ## Prerequisites
 
-Before we get started, we're going to need to confirm that we have some things *installed and configured*.
+Before we get started, we're going to need to set up the machine you'll work from: your *workstation*.  This is where you run Terraform to build and tear down the nodes, and where you SSH to the nodes from.  The Kubernetes work itself happens on the nodes, in AWS.
 
-### Terraform
+Your workstation can run **Linux** or **macOS**.  You'll need:
 
-[Hashicorp: Official Packaging Guide](https://www.hashicorp.com/official-packaging-guide)
+- **Terraform**, 1.5 or newer.  The tests in `terraform/tests` need 1.7 or newer.
+- **The AWS CLI**, version 2, signed in to your AWS account.  Terraform uses the same credentials.
+- **`git`** and an **SSH client**.
 
-[Install Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)
+These steps were tested on Ubuntu 26.04, Rocky Linux 10.2, and macOS 26 on Apple Silicon.
 
-I've written quite a bit of infrastructure-as-code in Terraform, using AWS, for lab environments and projects in the past, so I decided to try my hand with Terraform + KVM/`libvirt` to provide IaC automation for my projects.
+### Linux
 
-To install, you first need to add the repositories for Hashicorp, as described in the link above.  Follow the steps for your operating system.  Once the repositories have been added, you can install Terraform as instructed in the links above.
-
-**You can verify your installation by checking the version of Terraform:**
-
-```bash
-terraform --version
-
-```
-
-You should get the installed version of Terraform back.
-
-***Ok, Terraform is good to go.  Let's check the AWS CLI.***
-
-### AWS CLI
+[HashiCorp: Install Terraform](https://developer.hashicorp.com/terraform/install)
 
 [AWS: Installing or updating to the latest version of the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
+Terraform comes from HashiCorp's package repository, which keeps it up to date along with the rest of your system.  The commands depend on your distribution.  Everything after that is the same on any Linux.
+
+**Ubuntu (and Debian): install the tools we need, then Terraform:**
+
+```bash
+sudo apt-get update && sudo apt-get install -y curl git gnupg unzip
+wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(. /etc/os-release && echo "$VERSION_CODENAME") main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+sudo apt-get update && sudo apt-get install -y terraform
+
+```
+
+**Rocky Linux, RHEL, and AlmaLinux: install the tools we need, then Terraform:**
+
+```bash
+sudo dnf install -y dnf-plugins-core git unzip
+sudo dnf config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+sudo dnf install -y terraform
+
+```
+
+**Any Linux: install the AWS CLI with AWS's installer:**
+
+```bash
+curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o awscliv2.zip
+unzip -q awscliv2.zip
+sudo ./aws/install
+
+```
+
+The `$(uname -m)` picks the right installer for your machine, `x86_64` or `aarch64`.  Your distribution may have its own `awscli` package, but it isn't always version 2, so use AWS's installer.
+
+**Check the versions:**
+
+```bash
+terraform version
+aws --version
+
+```
+
+**SAMPLE OUTPUT (Ubuntu 26.04):**
+
+```bash
+Terraform v1.17.1
+on linux_amd64
+aws-cli/2.39.2 Python/3.14.8 Linux/7.0.0-38-generic exe/x86_64.ubuntu.26
+```
+
+### macOS
+
+[Homebrew](https://brew.sh)
+
+We'll use Homebrew.  If you don't have it yet, install it from the link above.
+
+***Watch out!***  Homebrew's own `terraform` formula is stuck at version 1.5.7, the last one before HashiCorp changed Terraform's license.  Install Terraform from HashiCorp's own Homebrew tap instead.  If you already have the old one, remove it first with `brew uninstall terraform`.
+
+**Install Terraform and the AWS CLI:**
+
+```bash
+brew tap hashicorp/tap
+brew install hashicorp/tap/terraform awscli
+
+```
+
+macOS already includes `git` (with the Xcode Command Line Tools) and an SSH client.
+
+**Check the versions:**
+
+```bash
+terraform version
+aws --version
+
+```
+
+**SAMPLE OUTPUT (macOS 26, Apple Silicon):**
+
+```bash
+Terraform v1.17.1
+on darwin_arm64
+aws-cli/2.39.2 Python/3.15.2 Darwin/25.5.0 source/arm64
+```
+
+### Sign In to AWS
+
 [AWS: Setting up the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html)
 
-You're going to need to have the AWS CLI installed and configured.  I've provided reference links for this.  Terraform uses the same credentials as the AWS CLI.
+Sign the AWS CLI in to your AWS account, following the link above.  Your account needs to be able to create a VPC, security groups, a key pair, and EC2 instances.  This works the same on Linux and macOS.
 
-**Once you have the AWS CLI installed, let's give it a test:**
+**Once you're signed in, let's give it a test:**
 
 ```bash
 aws sts get-caller-identity
 
 ```
 
-You should get back your account ID and the identity you're signed in as.
+You should get back your account ID and the identity you're signed in as.  If you get `Unable to locate credentials`, the AWS CLI isn't signed in yet.
+
+***Your workstation is ready.  Let's get the code.***
 
 ### Git Clone the `kubeadm-cluster-builder-aws-terraform` Code
 
