@@ -1,0 +1,33 @@
+name: Something isn't working
+description: Terraform or a step in the README isn't doing what the README says.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this. Please remove anything private before posting, such as your AWS account ID, IP addresses, key names, and paths that include your name.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, what you saw, and what you expected instead. Paste the error.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Lab version
+      description: The release you used (for example 0.2.1), or the commit if you're on main.
+    validations:
+      required: true
+  - type: input
+    id: region
+    attributes:
+      label: AWS region
+      placeholder: e.g. us-east-2
+  - type: textarea
+    id: versions
+    attributes:
+      label: Tool versions
+      description: The output of `terraform version` and `aws --version`.
+      render: text

@@ -1,0 +1,11 @@
+# Terraform working files and state, which hold details of your own account
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+crash.log
+
+# Written by terraform apply: the SSH key pair and the node list
+cluster_key.priv
+cluster_key.pub
+*-configuration.txt

@@ -1,5 +1,8 @@
 # kubeadm-cluster-builder-aws-terraform
+
 **Tom Dean - 12/31/2023**
+
+> **Note:** The Terraform was updated in 0.2.1. The Kubernetes steps below are still the 2023 ones, and they no longer work because `apt.kubernetes.io` has shut down. The next release updates them. The sample Terraform output is also from 2023.
 
 ## Introduction
 
@@ -19,13 +22,9 @@ I like to K.I.S.S. (Keep It Simple, Stupid!) whenever possible, and this was a c
 
 You can change *all kinds of things* in the variables.
 
-**Node count, by node type:**
-```bash
-variable "control_plane_count" {
-  type    = number
-  default = 1
-}
+**Worker node count (there's always one control plane node):**
 
+```bash
 variable "worker_count" {
   type    = number
   default = 2
@@ -33,6 +32,7 @@ variable "worker_count" {
 ```
 
 **Node sizing, by node type:**
+
 ```bash
 variable "control_plane_instance_type" {
   type    = string
@@ -44,6 +44,8 @@ variable "worker_instance_type" {
   default = "t3.large"
 }
 ```
+
+By default, only the public IP address you run Terraform from can reach the nodes, on SSH and the Kubernetes API. To allow other addresses, set `admin_cidrs`.
 
 Feel free to customize as needed.  The virtual machine sizing is based on my past experience, but you might be able to tighten things up on disk and/or instance size and run an acceptable cluster.  Alternatively, if you want to build clusters with more nodes, go for it!  Remember, these are **practice clusters**.
 
@@ -75,34 +77,35 @@ Before we get started, we're going to need to confirm that we have some things *
 
 I've written quite a bit of infrastructure-as-code in Terraform, using AWS, for lab environments and projects in the past, so I decided to try my hand with Terraform + KVM/`libvirt` to provide IaC automation for my projects.
 
-To install, you first need to add the repositories for Hashicorp, as described in the link above.  Follow the steps for your operating system.  Once the repositiories have been added, you can install Terraform as instructed in the links above.
+To install, you first need to add the repositories for Hashicorp, as described in the link above.  Follow the steps for your operating system.  Once the repositories have been added, you can install Terraform as instructed in the links above.
 
 **You can verify your installation by checking the version of Terraform:**
-```
+
+```bash
 terraform --version
 
 ```
 
 You should get the installed version of Terraform back.
 
-***Ok, Terraform is good to go.  Let's check KVM.***
+***Ok, Terraform is good to go.  Let's check the AWS CLI.***
 
 ### AWS CLI
 
-[]()
+[AWS: Installing or updating to the latest version of the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
-[]()
+[AWS: Setting up the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html)
 
-[]()
-
-[]()
-
-You're going to need to have the AWS CLI installed and configured.  I've provided reference links for this.
+You're going to need to have the AWS CLI installed and configured.  I've provided reference links for this.  Terraform uses the same credentials as the AWS CLI.
 
 **Once you have the AWS CLI installed, let's give it a test:**
+
 ```bash
+aws sts get-caller-identity
 
 ```
+
+You should get back your account ID and the identity you're signed in as.
 
 ### Git Clone the `kubeadm-cluster-builder-aws-terraform` Code
 
@@ -111,12 +114,14 @@ You're going to need to have the AWS CLI installed and configured.  I've provide
 Head on over to the `kubeadm-cluster-builder-aws-terraform` GitHub repository in the link above.  Go ahead and clone the repository to a directory of your choice.
 
 **Clone repository:**
+
 ```bash
 git clone https://github.com/southsidedean/kubeadm-cluster-builder-aws-terraform.git
 
 ```
 
 **SAMPLE OUTPUT:**
+
 ```bash
 Cloning into 'kubeadm-cluster-builder-aws-terraform'...
 remote: Enumerating objects: 103, done.
@@ -128,12 +133,14 @@ Resolving deltas: 100% (34/34), done.
 ```
 
 **Change directory into the repository directory:**
+
 ```bash
 cd kubeadm-cluster-builder-aws-terraform
 
 ```
 
 **Let's take a look at the Terraform code:**
+
 ```bash
 more terraform/main.tf
 
@@ -151,13 +158,22 @@ You can configure the infrastructure via the numerous variables at the beginning
 
 Ok, let's deploy a cluster!
 
+**The Terraform code is in the `terraform` directory:**
+
+```bash
+cd terraform
+
+```
+
 **First, we need to initialize our Terraform environment:**
+
 ```bash
 terraform init
 
 ```
 
 **SAMPLE OUTPUT:**
+
 ```bash
 Initializing the backend...
 
@@ -189,23 +205,27 @@ commands will detect it and remind you to do so if necessary.
 ```
 
 **Let's validate our Terraform code:**
+
 ```bash
 terraform validate
 
 ```
 
 **SAMPLE OUTPUT EXCERPT:**
+
 ```bash
 Success! The configuration is valid.
 ```
 
 **Next, let's generate a Terraform plan:**
+
 ```bash
 terraform plan -out cka-plan.plan
 
 ```
 
 **SAMPLE OUTPUT EXCERPT:**
+
 ```bash
 data.aws_iam_policy_document.instance-assume-role-policy: Reading...
 data.aws_caller_identity.current: Reading...
@@ -224,6 +244,7 @@ Terraform will perform the following actions:
 This will show us what Terraform is going to build, and will validate our code for errors.  With no errors, let's proceed with a `terraform apply`.
 
 **Deploy cluster:**
+
 ```bash
 terraform apply -auto-approve cka-plan.plan
 
@@ -232,6 +253,7 @@ terraform apply -auto-approve cka-plan.plan
 Terraform will handle all the heavy lifting for us and will build the environment as we requested.
 
 **SAMPLE OUTPUT EXCERPT:**
+
 ```bash
 random_pet.pet: Creating...
 tls_private_key.cluster_key: Creating...
@@ -270,12 +292,14 @@ With a clean Terraform execution under our belt, we can proceed and check for ou
 When you're done with the cluster, you use the `terraform destroy` command to tear down the cluster.
 
 **Destroy cluster:**
+
 ```bash
 terraform destroy -auto-approve
 
 ```
 
 **SAMPLE OUTPUT:**
+
 ```bash
 random_pet.pet: Refreshing state... [id=unbiased-pelican]
 tls_private_key.cluster_key: Refreshing state... [id=981bec5bb3a104abcb8bdff01b8efb36058a9d29]
@@ -313,20 +337,17 @@ Destroy complete! Resources: 18 destroyed.
 
 To get started, we're going to log into each of our nodes with a separate connection (window/tab/etc), and become the `root` user.
 
-**First, we'll need to retrieve the SSH key using Terraform:**
-```bash
-terraform output cluster_private_key_openssh | grep -v EOT > cluster_key.priv
-chmod 600 cluster_key.priv
-
-```
+Terraform saved the SSH key for the nodes as `cluster_key.priv` in the `terraform` directory, and the nodes' addresses in a `<CLUSTER_NAME>-configuration.txt` file next to it.  You can also get the addresses with `terraform output`.
 
 **Log in to each node using SSH:**
+
 ```bash
 ssh -i cluster_key.priv ubuntu@<NODE_PUBLIC_IP_ADDRESS>
 
 ```
 
 **Become the `root` user on all nodes:**
+
 ```bash
 sudo su
 
@@ -349,6 +370,7 @@ When deploying a Kubernetes cluster, you have choices with regard to your contai
 ***Perform the following steps on all nodes.***
 
 **Uninstall existing versions of Docker/`containerd`:**
+
 ```bash
 apt-get update
 apt-get remove docker docker.io containerd runc
@@ -356,6 +378,7 @@ apt-get remove docker docker.io containerd runc
 ```
 
 **Install software prerequisites, if needed:**
+
 ```bash
 apt-get update
 apt-get install -y ca-certificates curl gnupg
@@ -363,6 +386,7 @@ apt-get install -y ca-certificates curl gnupg
 ```
 
 **Add Docker Repository GPG Keys:**
+
 ```bash
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
@@ -371,12 +395,14 @@ chmod a+r /etc/apt/keyrings/docker.gpg
 ```
 
 **Add Docker Repository:**
+
 ```bash
 echo "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 ```
 
 **Install Docker/`containerd`:**
+
 ```bash
 apt-get update
 apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
@@ -384,12 +410,14 @@ apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin do
 ```
 
 **Add the `ubuntu` user to the `docker` group:**
+
 ```bash
 usermod -aG docker ubuntu
 
 ```
 
 **Enable/Start Docker:**
+
 ```bash
 systemctl enable --now docker
 systemctl status docker
@@ -397,6 +425,7 @@ systemctl status docker
 ```
 
 **SAMPLE OUTPUT:**
+
 ```bash
 Synchronizing state of docker.service with SysV service script with /lib/systemd/systemd-sysv-install.
 Executing: /lib/systemd/systemd-sysv-install enable docker
@@ -429,6 +458,7 @@ We should see the `docker.service` service `enabled` and `active` on all nodes. 
 There's an issue with the stock `/etc/containerd/config.toml` file and Kubernetes 1.26+.  We need to set the configuration file aside and restart the `containerd` service.
 
 **Backup/disable existing `/etc/containerd/config.toml`:**
+
 ```bash
 mv /etc/containerd/config.toml /etc/containerd/config.toml.bak
 systemctl restart containerd
@@ -436,6 +466,7 @@ systemctl restart containerd
 ```
 
 **Configure `/etc/containerd/config.toml`:**
+
 ```bash
 containerd config default > /etc/containerd/config.toml
 sed -i '/SystemdCgroup/s/false/true/' /etc/containerd/config.toml
@@ -443,6 +474,7 @@ sed -i '/sandbox_image/s/registry.k8s.io\/pause:3.6/registry.k8s.io\/pause:3.2/'
 systemctl restart containerd
 
 ```
+
 ***Sweet, we have a container runtime installed!  What's next?***
 
 #### Docker/`containerd`: Linux System Configuration Tasks
@@ -450,6 +482,7 @@ systemctl restart containerd
 ***Perform the following steps on all nodes.***
 
 **Configure the `systemd` `cgroup` driver:**
+
 ```bash
 touch /etc/docker/daemon.json
 cat <<EOF > /etc/docker/daemon.json
@@ -461,12 +494,14 @@ docker info | grep Cgroup
 ```
 
 **SAMPLE OUTPUT:**
+
 ```bash
  Cgroup Driver: systemd
  Cgroup Version: 2
 ```
 
 **Load the overlay and br_netfilter modules:**
+
 ```bash
 cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
 overlay
@@ -479,6 +514,7 @@ lsmod | grep -E "overlay|br_netfilter"
 ```
 
 **SAMPLE OUTPUT:**
+
 ```bash
 overlay
 br_netfilter
@@ -488,6 +524,7 @@ overlay               151552  0
 ```
 
 **Configure kernel parameters for bridging and IPv4 forwarding:**
+
 ```bash
 cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
 net.bridge.bridge-nf-call-iptables  = 1
@@ -498,6 +535,7 @@ EOF
 ```
 
 **SAMPLE OUTPUT:**
+
 ```bash
 net.bridge.bridge-nf-call-iptables  = 1
 net.bridge.bridge-nf-call-ip6tables = 1
@@ -505,11 +543,13 @@ net.ipv4.ip_forward                 = 1
 ```
 
 **Apply kernel parameters:**
+
 ```bash
 sysctl --system
 ```
 
 **SAMPLE OUTPUT EXCERPT:**
+
 ```bash
 ...
 * Applying /etc/sysctl.d/k8s.conf ...
@@ -534,6 +574,7 @@ net.ipv4.ip_forward = 1
 ***Perform the following steps on all nodes.***
 
 **Add CRI-O Repositories:**
+
 ```bash
 echo "deb [signed-by=/usr/share/keyrings/libcontainers-archive-keyring.gpg] https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_22.04/ /" > /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
 echo "deb [signed-by=/usr/share/keyrings/libcontainers-crio-archive-keyring.gpg] https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.22/xUbuntu_22.04/ /" > /etc/apt/sources.list.d/devel:kubic:libcontainers:stable:cri-o:1.22.list
@@ -541,6 +582,7 @@ echo "deb [signed-by=/usr/share/keyrings/libcontainers-crio-archive-keyring.gpg]
 ```
 
 **Add CRI-O Repository GPG Keys:**
+
 ```bash
 mkdir -p /usr/share/keyrings
 curl -L https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_22.04/Release.key | gpg --dearmor -o /usr/share/keyrings/libcontainers-archive-keyring.gpg
@@ -549,6 +591,7 @@ curl -L https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/
 ```
 
 **Install CRI-O Packages:**
+
 ```bash
 apt-get update
 apt-get install -y cri-o cri-o-runc
@@ -556,6 +599,7 @@ apt-get install -y cri-o cri-o-runc
 ```
 
 **Set the `cgroup` driver:**
+
 ```bash
 touch /etc/crio/crio.conf.d/02-cgroup-manager.conf
 cat <<EOF > /etc/crio/crio.conf.d/02-cgroup-manager.conf
@@ -567,6 +611,7 @@ EOF
 ```
 
 **Override the Pause Container Image:**
+
 ```bash
 touch /etc/crio/crio.conf.d/03-cgroup-pause.conf
 cat <<EOF > /etc/crio/crio.conf.d/03-cgroup-pause.conf
@@ -577,6 +622,7 @@ EOF
 ```
 
 **Sync CRI-O and distribution runc versions:**
+
 ```bash
 touch /etc/crio/crio.conf.d/04-crio-runtime.conf
 cat <<EOF > /etc/crio/crio.conf.d/04-crio-runtime.conf
@@ -589,6 +635,7 @@ EOF
 ```
 
 **Enable/start the CRI-O service:**
+
 ```bash
 systemctl enable --now crio
 systemctl status crio
@@ -602,6 +649,7 @@ systemctl status crio
 *Perform the following steps on all nodes.*
 
 **Load the `overlay` and `br_netfilter` modules:**
+
 ```bash
 cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
 overlay
@@ -614,6 +662,7 @@ lsmod | grep -E "overlay|br_netfilter"
 ```
 
 **Configure kernel parameters for bridging and IPv4 forwarding:**
+
 ```bash
 cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
 net.bridge.bridge-nf-call-iptables  = 1
@@ -624,6 +673,7 @@ EOF
 ```
 
 **Apply kernel parameters:**
+
 ```bash
 sysctl --system
 ```
@@ -643,24 +693,29 @@ Now that all our nodes are prepared and have a container runtime installed and r
 ***Perform the following steps on all nodes.***
 
 **Update `apt` index and install prerequisites:**
+
 ```bash
 apt-get update
 apt-get install -y apt-transport-https ca-certificates curl
 
 ```
+
 **Download Kubernetes Repository GPG Key:**
+
 ```bash
 curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
 
 ```
 
 **Add Kubernetes Repository:**
+
 ```bash
 echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
 
 ```
 
 **Let's see which versions of Kubernetes are available, for major version 1.26:**
+
 ```bash
 apt-get update
 apt-cache madison kubeadm | grep 1.26
@@ -668,6 +723,7 @@ apt-cache madison kubeadm | grep 1.26
 ```
 
 **SAMPLE OUTPUT:**
+
 ```bash
    kubeadm |  1.26.4-00 | https://apt.kubernetes.io kubernetes-xenial/main amd64 Packages
    kubeadm |  1.26.3-00 | https://apt.kubernetes.io kubernetes-xenial/main amd64 Packages
@@ -679,6 +735,7 @@ apt-cache madison kubeadm | grep 1.26
 We'll go ahead and install version 1.26.3.  That will allow us to practice upgrading to version 1.26.4, which is the latest at this time.
 
 **Refresh/install Kubernetes packages:**
+
 ```bash
 apt-get update
 apt-get install -y kubelet=1.26.3-00 kubeadm=1.26.3-00 kubectl=1.26.3-00
@@ -686,12 +743,14 @@ apt-get install -y kubelet=1.26.3-00 kubeadm=1.26.3-00 kubectl=1.26.3-00
 ```
 
 **Lock down Kubernetes package versions:**
+
 ```bash
 apt-mark hold kubelet kubeadm kubectl
 
 ```
 
 **SAMPLE OUTPUT:**
+
 ```bash
 kubelet set on hold.
 kubeadm set on hold.
@@ -703,6 +762,7 @@ kubectl set on hold.
 ***Perform the following step on the Control Plane node.***
 
 **Pull Kubernetes Container Images:**
+
 ```bash
 kubeadm config images pull --kubernetes-version 1.26.3
 
@@ -713,6 +773,7 @@ kubeadm config images pull --kubernetes-version 1.26.3
 Now that all the Linux parts are done, we'll wrap up on all the nodes.
 
 **Exit the `root` user shell:**
+
 ```bash
 exit
 ```
@@ -725,7 +786,7 @@ exit
 
 Now, we're going to use `kubeadm` to configure and deploy Kubernetes on the nodes we've set up.
 
-#### Inititalize the Control Plane Node
+#### Initialize the Control Plane Node
 
 ***Perform the following steps on the Control Plane node.***
 
@@ -750,12 +811,14 @@ EOF
 ```
 
 **Initialize Control Plane Node:**
+
 ```bash
 sudo kubeadm init --kubernetes-version 1.26.3
 
 ```
 
 **EXAMPLE OUTPUT:**
+
 ```bash
 [init] Using Kubernetes version: v1.26.3
 [preflight] Running pre-flight checks
@@ -827,12 +890,13 @@ Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
 Then you can join any number of worker nodes by running the following on each as root:
 
 kubeadm join 10.0.1.37:6443 --token o4v4rg.pqhucyn7ff0qap01 \
-	--discovery-token-ca-cert-hash sha256:01fabf406bce39943a486985b96330dda53bf6902700913c4b461b79a9852623
+    --discovery-token-ca-cert-hash sha256:01fabf406bce39943a486985b96330dda53bf6902700913c4b461b79a9852623
 ```
 
 #### Configure `kubectl`: On the Control Plane Node
 
 **Configure `kubectl`:**
+
 ```bash
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
@@ -841,12 +905,14 @@ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 
 **Checking our work:**
+
 ```bash
 kubectl get nodes
 
 ```
 
 **EXAMPLE OUTPUT:**
+
 ```bash
 NAME               STATUS     ROLES           AGE    VERSION
 control-plane-01   NotReady   control-plane   2m2s   v1.26.3
@@ -861,6 +927,7 @@ control-plane-01   NotReady   control-plane   2m2s   v1.26.3
 ***Perform the following steps on the Control Plane node.***
 
 **Download the Calico CNI manifest:**
+
 ```bash
 curl https://raw.githubusercontent.com/projectcalico/calico/v3.25.1/manifests/calico.yaml -O
 ```
@@ -868,12 +935,14 @@ curl https://raw.githubusercontent.com/projectcalico/calico/v3.25.1/manifests/ca
 If we wanted to customize our Calico deployment, we could edit the `calico.yaml` manifest.  We're going to use it as-is.
 
 **Deploy the Calico manifest:**
+
 ```bash
 kubectl apply -f calico.yaml
 
 ```
 
 **SAMPLE OUTPUT:**
+
 ```bash
 poddisruptionbudget.policy/calico-kube-controllers created
 serviceaccount/calico-kube-controllers created
@@ -905,12 +974,14 @@ deployment.apps/calico-kube-controllers created
 ```
 
 **Checking our work:**
+
 ```bash
 watch -n 1 kubectl get nodes
 
 ```
 
 **SAMPLE OUTPUT:**
+
 ```bash
 NAME               STATUS   ROLES           AGE    VERSION
 control-plane-01   Ready    control-plane   3m4s   v1.26.3
@@ -927,22 +998,26 @@ Now that we have a functional Control Plane, we can join the worker nodes to the
 ***Perform the following steps on all worker nodes.***
 
 EXAMPLE:
+
 ```bash
 kubeadm join 10.0.1.37:6443 --token o4v4rg.pqhucyn7ff0qap01 --discovery-token-ca-cert-hash sha256:01fabf406bce39943a486985b96330dda53bf6902700913c4b461b79a9852623
 ```
 
 **If you can't remember the join command, use the following command to retrieve it:**
+
 ```bash
 sudo kubeadm token create --print-join-command
 
 ```
 
 Join **each worker node** to the cluster, using `sudo`:
+
 ```bash
 sudo kubeadm join ...  <-- FILL THIS IN WITH YOUR JOIN COMMAND
 ```
 
 **SAMPLE OUTPUT:**
+
 ```bash
 d46e1183c8343157924
 [preflight] Running pre-flight checks
@@ -965,6 +1040,7 @@ Run 'kubectl get nodes' on the control-plane to see this node join the cluster.
 ***Perform the following steps on the Control Plane node.***
 
 **Checking our work:**
+
 ```bash
 watch -n 1 kubectl get nodes
 
@@ -973,6 +1049,7 @@ watch -n 1 kubectl get nodes
 Wait until all the nodes are in a `Ready` state, as shown below.
 
 **SAMPLE OUTPUT:**
+
 ```bash
 Every 1.0s: kubectl get nodes       control-plane-01: Thu Apr 13 16:36:41 2023
 
@@ -985,11 +1062,13 @@ worker-node-02     Ready    <none>          9m20s   v1.26.3
 Once all nodes are in the `Ready` state, exit the `watch` command with `CRTL-C`.
 
 **Taking a look at all the resources in our cluster:**
+
 ```bash
 kubectl get all -A
 ```
 
 **EXAMPLE OUTPUT:**
+
 ```bash
 NAMESPACE     NAME                                           READY   STATUS    RESTARTS   AGE
 kube-system   pod/calico-kube-controllers-5857bf8d58-jbpkt   1/1     Running   0          3m26s
@@ -1025,13 +1104,14 @@ kube-system   replicaset.apps/coredns-787d4945fb                   2         2  
 
 ***There you have it!  A Kubernetes cluster, assembled with `kubeadm`.***
 
-## OPTIONAL: Configure `kubectl`: On Your Virtualzation Host
+## OPTIONAL: Configure `kubectl`: On Your Virtualization Host
 
 You might want to manage your cluster using `kubectl` on your virtualization host.  This is a common use case scenario that is easy to implement.
 
 If you don't have `kubectl` installed on your virtualization host, install it now.
 
 **Copy `KUBECONFIG` to KVM host:**
+
 ```bash
 scp -i ~/.ssh/id_ed25519 ubuntu@<CONTROL_PLANE_IP>:~/.kube/config control-plane-01.conf
 KUBECONFIG=control-plane-01.conf ; export KUBECONFIG
@@ -1041,12 +1121,14 @@ KUBECONFIG=control-plane-01.conf ; export KUBECONFIG
 If you want to get totally fancy and create a context for it, feel free to indulge your fancy.  I'm keeping things on-point here and not going down that rabbit hole.
 
 **Checking our work:**
+
 ```bash
 kubectl get nodes
 
 ```
 
 **EXAMPLE OUTPUT:**
+
 ```bash
 NAME               STATUS   ROLES           AGE   VERSION
 control-plane-01   Ready    control-plane   43m   v1.26.3
@@ -1061,12 +1143,14 @@ When you're done with the cluster, you can `unset KUBECONFIG` to stop using the 
 When you're done with the cluster, you use the `terraform destroy` command to tear down the cluster.
 
 **Destroy cluster:**
+
 ```bash
 terraform destroy -auto-approve
 
 ```
 
 **SAMPLE OUTPUT:**
+
 ```bash
 ...
 module.worker.libvirt_volume.volume-qcow2[0]: Destruction complete after 0s
@@ -1082,6 +1166,7 @@ Destroy complete! Resources: 11 destroyed.
 ```
 
 **Checking our work:**
+
 ```bash
 virsh list --all
 

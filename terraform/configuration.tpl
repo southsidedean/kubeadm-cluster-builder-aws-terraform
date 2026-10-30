@@ -5,25 +5,20 @@ ${ cluster_name }
 ${ cluster_key_name }
 
 [cluster-ssh-key]
-${ cluster_private_key_openssh }
+cluster_key.priv (in this directory)
 
 [node-ssh-user]
 ubuntu
 
 [control-plane-networking]
-Public DNS: ${ control_plane_public_dns }
-Public IP: ${ control_plane_public_ip }
-Private DNS: ${ control_plane_private_dns }
-Private IP: ${ control_plane_private_ip }
-
-[worker-0-networking]
-Public DNS: ${ worker_0_public_dns }
-Public IP: ${ worker_0_public_ip }
-Private DNS: ${ worker_0_private_dns }
-Private IP: ${ worker_0_private_ip }
-
-[worker-1-networking]
-Public DNS: ${ worker_1_public_dns }
-Public IP: ${ worker_1_public_ip }
-Private DNS: ${ worker_1_private_dns }
-Private IP: ${ worker_1_private_ip }
+Public DNS: ${ control_plane.public_dns }
+Public IP: ${ control_plane.public_ip }
+Private DNS: ${ control_plane.private_dns }
+Private IP: ${ control_plane.private_ip }
+%{ for i, w in workers }
+[worker-${ i }-networking]
+Public DNS: ${ w.public_dns }
+Public IP: ${ w.public_ip }
+Private DNS: ${ w.private_dns }
+Private IP: ${ w.private_ip }
+%{ endfor ~}
