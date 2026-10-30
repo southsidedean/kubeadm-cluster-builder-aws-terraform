@@ -76,6 +76,11 @@ variable "control_plane_instance_type" {
 variable "worker_count" {
   type    = number
   default = 2
+
+  validation {
+    condition     = var.worker_count >= 1 && floor(var.worker_count) == var.worker_count
+    error_message = "worker_count must be a whole number, 1 or more."
+  }
 }
 
 variable "worker_instance_type" {
@@ -88,6 +93,11 @@ variable "worker_instance_type" {
 variable "admin_cidrs" {
   type    = list(string)
   default = []
+
+  validation {
+    condition     = alltrue([for c in var.admin_cidrs : can(cidrhost(c, 0)) && !strcontains(c, ":")])
+    error_message = "admin_cidrs must be IPv4 CIDR blocks, such as 203.0.113.7/32."
+  }
 }
 
 # -------------------------
@@ -130,11 +140,12 @@ data "aws_ami" "ubuntu_ami" {
 # -------------------------
 
 data "http" "my_ip" {
-  url = "https://checkip.amazonaws.com"
+  count = length(var.admin_cidrs) > 0 ? 0 : 1
+  url   = "https://checkip.amazonaws.com"
 }
 
 locals {
-  admin_cidrs = length(var.admin_cidrs) > 0 ? var.admin_cidrs : ["${chomp(data.http.my_ip.response_body)}/32"]
+  admin_cidrs = length(var.admin_cidrs) > 0 ? var.admin_cidrs : ["${chomp(data.http.my_ip[0].response_body)}/32"]
 }
 
 # -------------------------
@@ -373,22 +384,24 @@ output "cluster_private_key_openssh" {
   sensitive = true
 }
 
-output "control_plane" {
-  value = {
-    public_dns  = aws_instance.control_plane.public_dns
-    public_ip   = aws_instance.control_plane.public_ip
-    private_dns = aws_instance.control_plane.private_dns
-    private_ip  = aws_instance.control_plane.private_ip
+locals {
+  addresses = {
+    for name, i in merge({ control_plane = aws_instance.control_plane }, { for n, w in aws_instance.worker : "worker_${n}" => w }) :
+    name => {
+      public_dns  = i.public_dns
+      public_ip   = i.public_ip
+      private_dns = i.private_dns
+      private_ip  = i.private_ip
+    }
   }
 }
 
+output "control_plane" {
+  value = local.addresses["control_plane"]
+}
+
 output "workers" {
-  value = [for w in aws_instance.worker : {
-    public_dns  = w.public_dns
-    public_ip   = w.public_ip
-    private_dns = w.private_dns
-    private_ip  = w.private_ip
-  }]
+  value = [for n in range(var.worker_count) : local.addresses["worker_${n}"]]
 }
 
 output "admin_cidrs" {
@@ -405,8 +418,8 @@ resource "local_file" "cluster_configuration" {
   content = templatefile("${path.root}/configuration.tpl", {
     cluster_name     = local.cluster_name
     cluster_key_name = aws_key_pair.cluster_key.key_name
-    control_plane    = aws_instance.control_plane
-    workers          = aws_instance.worker
+    control_plane    = local.addresses["control_plane"]
+    workers          = [for n in range(var.worker_count) : local.addresses["worker_${n}"]]
   })
 }
 
