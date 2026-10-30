@@ -16,11 +16,12 @@ Run `terraform destroy` on any nodes built with 0.2.0 before you pull this relea
 - The instance metadata service needs a session token (IMDSv2), and pods on the pod network can't reach it. Disks are encrypted gp3 volumes instead of gp2.
 - The Ubuntu image lookup matches only Canonical's Ubuntu Server images for amd64. The old filter also matched the arm64 images, which don't run on the t3 instance types the lab uses.
 - The outputs and the configuration file list every worker, so `worker_count` works with any number. The configuration file no longer includes the private key; Terraform saves it to `cluster_key.priv`.
-- The README says to `cd terraform` before running Terraform, and the AWS CLI section has its links and a test command.
+- The README says to `cd terraform` before running Terraform.
 
 ### New
 
 - AWS provider 6, and every provider the lab uses is pinned.
+- The README's prerequisites cover setting up your workstation on Linux (Ubuntu, Rocky Linux, RHEL, AlmaLinux) or macOS: Terraform from HashiCorp's packages, the AWS CLI version 2, and signing in to AWS. Tested on Ubuntu 26.04, Rocky Linux 10.2, and macOS 26.
 - An `ubuntu_version` variable for the node image.
 - Terraform checks `worker_count` (a whole number, 1 or more) and `admin_cidrs` (IPv4 CIDR blocks) before building anything.
 - Tests for the Terraform (`terraform test`, in `terraform/tests`) that need no AWS account. They check who can reach the nodes, the node settings, the Ubuntu image lookup, and that the outputs work with one worker or five.
