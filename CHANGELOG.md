@@ -22,8 +22,10 @@ Run `terraform destroy` on any nodes built with 0.2.0 before you pull this relea
 
 - AWS provider 6, and every provider the lab uses is pinned.
 - An `ubuntu_version` variable for the node image.
+- Terraform checks `worker_count` (a whole number, 1 or more) and `admin_cidrs` (IPv4 CIDR blocks) before building anything.
+- Tests for the Terraform (`terraform test`, in `terraform/tests`) that need no AWS account. They check who can reach the nodes, the node settings, the Ubuntu image lookup, and that the outputs work with one worker or five.
 - The lab is MIT licensed.
-- Checks on every pull request: Terraform formatting and validation, TFLint, a Trivy scan, Markdown lint, spelling, and the workflows themselves. A weekly check reports when the Kubernetes, Calico, or Ubuntu versions the lab uses fall behind.
+- Checks on every pull request: Terraform formatting, validation, and tests, TFLint, a Trivy scan, Markdown lint, spelling, and the workflows themselves. A weekly check reports when the Kubernetes, Calico, or Ubuntu versions the lab uses fall behind.
 
 ### Removed
 
