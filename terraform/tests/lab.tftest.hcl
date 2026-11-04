@@ -155,6 +155,30 @@ run "ami_is_canonical_ubuntu_amd64" {
 }
 
 # -------------------------
+# Tags
+# -------------------------
+
+run "resources_have_the_cluster_tag" {
+  assert {
+    condition = alltrue([
+      for tags in concat(
+        [
+          aws_key_pair.cluster_key.tags,
+          aws_vpc.course_vpc.tags,
+          aws_subnet.course_subnet.tags,
+          aws_internet_gateway.default.tags,
+          aws_route_table.course_public_rt.tags,
+          aws_security_group.nodes.tags,
+          aws_instance.control_plane.tags,
+        ],
+        aws_instance.worker[*].tags,
+      ) : tags["Cluster"] == output.cluster_name
+    ])
+    error_message = "The key pair, the network, and the nodes should have a Cluster tag with the cluster's name."
+  }
+}
+
+# -------------------------
 # Worker count, outputs, and the configuration file
 # -------------------------
 
