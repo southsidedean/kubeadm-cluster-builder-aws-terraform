@@ -2,7 +2,7 @@
 # Open source K8s lab deployment
 # for CNCF CKA/D labs
 # Tom Dean
-# Last updated 10/30/2026
+# Last updated 11/4/2026
 # -------------------------
 
 # ========================
@@ -39,7 +39,10 @@ terraform {
 # Configure the AWS Provider
 # Set Region in the aws_region
 # variable in Cluster Variables
-# Every resource gets the Class and Cluster tags
+# Every resource gets the Class tag. The Cluster tag goes on each
+# resource instead: the cluster name isn't known until the first apply
+# creates it, and in default_tags that fails the security group rules with
+# "Provider produced inconsistent final plan"
 # ========================
 
 provider "aws" {
@@ -47,8 +50,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Class   = var.class_name
-      Cluster = local.cluster_name
+      Class = var.class_name
     }
   }
 }
@@ -160,6 +162,10 @@ resource "tls_private_key" "cluster_key" {
 resource "aws_key_pair" "cluster_key" {
   key_name_prefix = "cluster_key_"
   public_key      = tls_private_key.cluster_key.public_key_openssh
+
+  tags = {
+    Cluster = local.cluster_name
+  }
 }
 
 # -------------------------
@@ -186,7 +192,8 @@ resource "aws_vpc" "course_vpc" {
   enable_dns_hostnames = true
 
   tags = {
-    Name = "${var.class_name}-vpc-${local.cluster_name}"
+    Name    = "${var.class_name}-vpc-${local.cluster_name}"
+    Cluster = local.cluster_name
   }
 }
 
@@ -203,12 +210,17 @@ resource "aws_subnet" "course_subnet" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "${var.class_name}-${local.cluster_name}-subnet"
+    Name    = "${var.class_name}-${local.cluster_name}-subnet"
+    Cluster = local.cluster_name
   }
 }
 
 resource "aws_internet_gateway" "default" {
   vpc_id = aws_vpc.course_vpc.id
+
+  tags = {
+    Cluster = local.cluster_name
+  }
 }
 
 resource "aws_route_table" "course_public_rt" {
@@ -220,7 +232,8 @@ resource "aws_route_table" "course_public_rt" {
   }
 
   tags = {
-    Name = "${var.class_name}-${local.cluster_name}-routetable"
+    Name    = "${var.class_name}-${local.cluster_name}-routetable"
+    Cluster = local.cluster_name
   }
 }
 
@@ -241,7 +254,8 @@ resource "aws_security_group" "nodes" {
   vpc_id      = aws_vpc.course_vpc.id
 
   tags = {
-    Name = "${var.class_name}-${local.cluster_name}-nodes"
+    Name    = "${var.class_name}-${local.cluster_name}-nodes"
+    Cluster = local.cluster_name
   }
 }
 
@@ -321,8 +335,9 @@ resource "aws_instance" "control_plane" {
   }
 
   tags = {
-    Name = "${var.class_name}-${local.cluster_name}-control-plane"
-    Role = "control-plane"
+    Name    = "${var.class_name}-${local.cluster_name}-control-plane"
+    Cluster = local.cluster_name
+    Role    = "control-plane"
   }
 
   # Keep the nodes when a newer Ubuntu image comes out
@@ -358,8 +373,9 @@ resource "aws_instance" "worker" {
   }
 
   tags = {
-    Name = "${var.class_name}-${local.cluster_name}-worker-${count.index}"
-    Role = "worker"
+    Name    = "${var.class_name}-${local.cluster_name}-worker-${count.index}"
+    Cluster = local.cluster_name
+    Role    = "worker"
   }
 
   lifecycle {

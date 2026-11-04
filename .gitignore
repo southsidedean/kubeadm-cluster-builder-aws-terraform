@@ -3,6 +3,7 @@
 *.tfstate
 *.tfstate.*
 *.tfvars
+*.plan
 crash.log
 
 # Written by terraform apply: the SSH key pair and the node list
